@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext.jsx'
 import { useToast } from '@/context/ToastContext.jsx'
 import { addDays, fmt, todayISO } from '@/utils/helpers.js'
@@ -29,7 +29,7 @@ const emptyItem = () => ({
 })
 
 export default function NewPurchasePage() {
-  const navigate = useNavigate()
+  const router = useRouter()
   const { addPurchase, parties, touchRecentItem } = useApp()
   const toast = useToast()
   const [form, setForm] = useState(() => initialForm())
@@ -302,9 +302,9 @@ export default function NewPurchasePage() {
     })
 
     toast(`Purchase ${form.billNo.trim() || 'bill'} recorded for ${form.supplier}`, 'success')
-    navigate('/purchase')
+    router.push('/purchase')
     return true
-  }, [addPurchase, computedItems, form, navigate, subtotal, tax, taxBreakdown, toast, total, transport])
+  }, [addPurchase, computedItems, form, subtotal, tax, taxBreakdown, toast, total, transport])
 
   useKeyboard({
     bindings: [{ id: 'saveRecord', allowInEditable: true, handler: savePurchase }],
@@ -794,7 +794,7 @@ export default function NewPurchasePage() {
               <div className="erp-footer-actions">
                 <Button variant="ghost" size="sm" onClick={appendRow} style={ERP_ACTION_BUTTON}>Add Row</Button>
                 <Button variant="danger" size="sm" onClick={() => removeRow(items.length - 1)} disabled={items.length === 1} style={ERP_ACTION_BUTTON}>Delete Row</Button>
-                <Button ref={setFooterRef(4)} variant="ghost" size="sm" onClick={() => navigate('/purchase')} onKeyDown={consumeFooterEnter(4)} style={ERP_ACTION_BUTTON}>Cancel</Button>
+                <Button ref={setFooterRef(4)} variant="ghost" size="sm" onClick={() => router.push('/purchase')} onKeyDown={consumeFooterEnter(4)} style={ERP_ACTION_BUTTON}>Cancel</Button>
                 <Button ref={setFooterRef(5)} variant="primary" size="sm" onClick={savePurchase} onKeyDown={consumeFooterEnter(5)} style={ERP_PRIMARY_BUTTON_PURCHASE}>Create Purchase</Button>
               </div>
             </div>

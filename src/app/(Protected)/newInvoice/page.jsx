@@ -103,8 +103,27 @@ export default function NewInvoicePage() {
 
   useEffect(() => {
     if (!isOpen) return
-    setActivePreview({ type: 'party', record: suggestions[highlightedIndex] ?? null, rowIndex: null })
-    setPartyPreviewArmed(false)
+
+    const record = suggestions[highlightedIndex] ?? null
+
+    setActivePreview(prev => {
+      const previousId = prev?.record?.id ?? null
+      const currentId = record?.id ?? null
+
+      if (
+        prev?.type === 'party' &&
+        previousId === currentId &&
+        prev?.rowIndex === null
+      ) {
+        return prev
+      }
+
+      return {
+        type: 'party',
+        record,
+        rowIndex: null
+      }
+    })
   }, [highlightedIndex, isOpen, suggestions])
 
   useEffect(() => {
@@ -188,9 +207,35 @@ export default function NewInvoicePage() {
     setPartyPreviewArmed(true)
   }, [])
 
-  const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
-    setActivePreview({ type: 'item', record: item ?? null, rowIndex: rowIndex ?? null })
-  }, [])
+const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
+    setActivePreview(prev => {
+        const previousId =
+            prev?.record?.id ??
+            prev?.record?._id ??
+            null
+
+        const currentId =
+            item?.id ??
+            item?._id ??
+            null
+
+        const currentRowIndex = rowIndex ?? null
+
+        if (
+            prev?.type === 'item' &&
+            previousId === currentId &&
+            prev?.rowIndex === currentRowIndex
+        ) {
+            return prev
+        }
+
+        return {
+            type: 'item',
+            record: item ?? null,
+            rowIndex: currentRowIndex
+        }
+    })
+}, [])
 
   const clearPreviewPanel = useCallback(() => {
     setActivePreview({ type: null, record: null, rowIndex: null })
@@ -228,12 +273,12 @@ export default function NewInvoicePage() {
     setItems((current) => current.map((row, index) => (
       index === rowIndex
         ? {
-            ...row,
-            desc: item.name,
-            hsn: item.hsn || row.hsn,
-            rate: item.lastRate ? String(item.lastRate) : row.rate,
-            taxPct: item.gstSlab ?? row.taxPct,
-          }
+          ...row,
+          desc: item.name,
+          hsn: item.hsn || row.hsn,
+          rate: item.lastRate ? String(item.lastRate) : row.rate,
+          taxPct: item.gstSlab ?? row.taxPct,
+        }
         : row
     )))
   }, [])
@@ -332,7 +377,7 @@ export default function NewInvoicePage() {
     toast(`Invoice ${invoice.id} created for ${invoice.party}`, 'success')
     router.push('/sales')
     return true
-  }, [addInvoice, computedItems, form,subtotal, tax, taxBreakdown, toast, total, transport])
+  }, [addInvoice, computedItems, form, subtotal, tax, taxBreakdown, toast, total, transport])
 
   useKeyboard({
     bindings: [{ id: 'saveRecord', allowInEditable: true, handler: saveInvoice }],
@@ -834,54 +879,54 @@ export default function NewInvoicePage() {
               onClose={clearPreviewPanel}
             />
           ) : (
-          <div className="erp-footer-grid">
-            <div className="erp-footer-panel">
-              <div className="erp-footer-title">Dispatch & Payment</div>
-              <div className="erp-footer-fields erp-footer-fields--three">
-                <Input ref={setFooterRef(0)} label="Vehicle No." value={transport.vehicleNo} onChange={(event) => setTransport((current) => ({ ...current, vehicleNo: event.target.value }))} onKeyDown={consumeFooterEnter(0)} inputClassName="erp-field" />
-                <Input ref={setFooterRef(1)} label="Dispatch From" value={transport.dispatchFrom} onChange={(event) => setTransport((current) => ({ ...current, dispatchFrom: event.target.value }))} onKeyDown={consumeFooterEnter(1)} inputClassName="erp-field" />
-                <Select ref={setFooterRef(2)} label="Payment Mode" value={transport.dispatchThrough} onChange={(event) => setTransport((current) => ({ ...current, dispatchThrough: event.target.value }))} options={['Cash', 'Credit', 'Bank', 'UPI']} onKeyDown={consumeFooterEnter(2)} selectClassName="erp-field" />
+            <div className="erp-footer-grid">
+              <div className="erp-footer-panel">
+                <div className="erp-footer-title">Dispatch & Payment</div>
+                <div className="erp-footer-fields erp-footer-fields--three">
+                  <Input ref={setFooterRef(0)} label="Vehicle No." value={transport.vehicleNo} onChange={(event) => setTransport((current) => ({ ...current, vehicleNo: event.target.value }))} onKeyDown={consumeFooterEnter(0)} inputClassName="erp-field" />
+                  <Input ref={setFooterRef(1)} label="Dispatch From" value={transport.dispatchFrom} onChange={(event) => setTransport((current) => ({ ...current, dispatchFrom: event.target.value }))} onKeyDown={consumeFooterEnter(1)} inputClassName="erp-field" />
+                  <Select ref={setFooterRef(2)} label="Payment Mode" value={transport.dispatchThrough} onChange={(event) => setTransport((current) => ({ ...current, dispatchThrough: event.target.value }))} options={['Cash', 'Credit', 'Bank', 'UPI']} onKeyDown={consumeFooterEnter(2)} selectClassName="erp-field" />
+                </div>
+                <Textarea
+                  ref={setFooterRef(3)}
+                  label="Invoice Notes"
+                  rows={3}
+                  value={form.notes}
+                  onChange={(event) => setField('notes', event.target.value)}
+                  placeholder="Narration / terms"
+                  onKeyDown={consumeFooterEnter(3)}
+                  textareaClassName="erp-field erp-field--textarea"
+                />
               </div>
-              <Textarea
-                ref={setFooterRef(3)}
-                label="Invoice Notes"
-                rows={3}
-                value={form.notes}
-                onChange={(event) => setField('notes', event.target.value)}
-                placeholder="Narration / terms"
-                onKeyDown={consumeFooterEnter(3)}
-                textareaClassName="erp-field erp-field--textarea"
-              />
-            </div>
 
-            <div className="erp-footer-panel erp-footer-panel--totals">
-              <div className="erp-footer-title">Totals</div>
-              <div className="erp-tax-block">
-                {taxBreakdown.length > 0 ? taxBreakdown.map((row) => (
-                  <div key={row.rate} className="erp-tax-block-row">
-                    <span>GST @ {row.rate}% (taxable {fmt(Math.round(row.taxable))})</span>
-                    <span className="erp-tax-block-value">{fmt(Math.round(row.taxable * row.rate / 100))}</span>
-                  </div>
-                )) : (
-                  <div className="erp-tax-block-row erp-tax-block-row--muted">
-                    <span>GST slabs appear from lines</span>
-                    <span className="erp-tax-block-value">{fmt(0)}</span>
-                  </div>
-                )}
-              </div>
-              <div className="erp-summary-table">
-                <SummaryRow label="Taxable Value" value={fmt(subtotal)} />
-                <SummaryRow label="Total Tax" value={fmt(tax)} />
-                <SummaryRow label="Grand Total" value={fmt(total)} large />
-              </div>
-              <div className="erp-footer-actions">
-                <Button variant="ghost" size="sm" onClick={appendRow} style={ERP_ACTION_BUTTON}>Add Row</Button>
-                <Button variant="danger" size="sm" onClick={() => removeRow(items.length - 1)} disabled={items.length === 1} style={ERP_ACTION_BUTTON}>Delete Row</Button>
-                <Button ref={setFooterRef(4)} variant="ghost" size="sm" onClick={() => router.push('/sales')} onKeyDown={consumeFooterEnter(4)} style={ERP_ACTION_BUTTON}>Cancel</Button>
-                <Button ref={setFooterRef(5)} variant="primary" size="sm" onClick={saveInvoice} onKeyDown={consumeFooterEnter(5)} style={ERP_PRIMARY_BUTTON}>Create Invoice</Button>
+              <div className="erp-footer-panel erp-footer-panel--totals">
+                <div className="erp-footer-title">Totals</div>
+                <div className="erp-tax-block">
+                  {taxBreakdown.length > 0 ? taxBreakdown.map((row) => (
+                    <div key={row.rate} className="erp-tax-block-row">
+                      <span>GST @ {row.rate}% (taxable {fmt(Math.round(row.taxable))})</span>
+                      <span className="erp-tax-block-value">{fmt(Math.round(row.taxable * row.rate / 100))}</span>
+                    </div>
+                  )) : (
+                    <div className="erp-tax-block-row erp-tax-block-row--muted">
+                      <span>GST slabs appear from lines</span>
+                      <span className="erp-tax-block-value">{fmt(0)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="erp-summary-table">
+                  <SummaryRow label="Taxable Value" value={fmt(subtotal)} />
+                  <SummaryRow label="Total Tax" value={fmt(tax)} />
+                  <SummaryRow label="Grand Total" value={fmt(total)} large />
+                </div>
+                <div className="erp-footer-actions">
+                  <Button variant="ghost" size="sm" onClick={appendRow} style={ERP_ACTION_BUTTON}>Add Row</Button>
+                  <Button variant="danger" size="sm" onClick={() => removeRow(items.length - 1)} disabled={items.length === 1} style={ERP_ACTION_BUTTON}>Delete Row</Button>
+                  <Button ref={setFooterRef(4)} variant="ghost" size="sm" onClick={() => router.push('/sales')} onKeyDown={consumeFooterEnter(4)} style={ERP_ACTION_BUTTON}>Cancel</Button>
+                  <Button ref={setFooterRef(5)} variant="primary" size="sm" onClick={saveInvoice} onKeyDown={consumeFooterEnter(5)} style={ERP_PRIMARY_BUTTON}>Create Invoice</Button>
+                </div>
               </div>
             </div>
-          </div>
           )}
         </section>
       </div>

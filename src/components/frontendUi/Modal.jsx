@@ -1,3 +1,4 @@
+"use client"
 import React, { useEffect, useRef } from 'react'
 import { useEscapeAction } from '../../context/EscapeContext.jsx'
 import useFocusRestore from '../../hooks/useFocusRestore.js'

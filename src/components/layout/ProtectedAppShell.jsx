@@ -83,7 +83,7 @@
     }
 
     function isLockedWorkspacePath(pathname) {
-        return pathname === '/sales/new' || pathname === '/purchase/new' || pathname === '/parties/new'
+        return pathname === '/newInvoice' || pathname === '/newPurchase' || pathname === '/newParty'
     }
 
     function parentIdForPath(pathname) {

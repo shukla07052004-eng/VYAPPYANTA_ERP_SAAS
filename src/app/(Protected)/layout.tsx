@@ -3,6 +3,7 @@
 "use client";
 
 import App from "@/components/layout/ProtectedAppShell";
+import './protected.css'
 
 export default function ProtectedLayout({
   children,
@@ -10,7 +11,7 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen">
+    <div className="protected-layout">
 
       <App>
         {children}

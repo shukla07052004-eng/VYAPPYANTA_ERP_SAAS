@@ -116,13 +116,7 @@ function Sidebar({
                             aria-current={active ? 'page' : undefined}
                             onFocus={() => onActiveIndexChange?.(childIndex)}
                             onClick={() => {
-                              if (isSection) {
-                                onToggleSection?.(item.id)
-                              }
-
-                              if (item.path) {
-                                onNavigate?.(item.path)
-                              }
+                              onNavigate?.(child.path)
                             }}
                             
                             onMouseDown={(event) => {

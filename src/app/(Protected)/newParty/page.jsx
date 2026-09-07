@@ -1,13 +1,13 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { useApp } from '../context/AppContext.jsx'
-import { useToast } from '../context/ToastContext.jsx'
-import useKeyboard from '../hooks/useKeyboard.js'
-import Button from '../components/ui/Button.jsx'
-import { CheckboxField, FieldRow, FormGrid, Input, Select, Textarea } from './PartyFormParts.jsx'
-import { scrollElementIntoView } from '../utils/focusScroll.js'
+import { usePathname, useRouter } from 'next/navigation'
+import { useApp } from '@/context/AppContext.jsx'
+import { useToast } from '@/context/ToastContext.jsx'
+import useKeyboard from '@/hooks/useKeyboard.js'
+import Button from '@/components/frontendUi/Button.jsx'
+import { CheckboxField, FieldRow, FormGrid, Input, Select, Textarea } from '@/components/layout/PartyFormParts.jsx'
+import { scrollElementIntoView } from '@/utils/focusScroll.js'
 
 const PARTY_TYPES = ['Customer', 'Supplier', 'Distributor', 'Carrier', 'Agent']
 const ACCOUNT_GROUPS = ['Sundry Debtors', 'Sundry Creditors', 'Distributors', 'Transporters', 'Commission Agents']
@@ -18,11 +18,11 @@ const DELIVERY_SLOTS = ['09:00 - 13:00', '13:00 - 17:00', '17:00 - 21:00']
 const STATUS_OPTIONS = ['Active', 'Blocked', 'Archived']
 
 export default function PartyFormPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
+  const router = useRouter()
+  const pathname = usePathname()
   const { parties, addParty, updateParty } = useApp()
   const toast = useToast()
-  const editingId = location.state?.partyId ?? null
+  const editingId = pathname.state?.partyId ?? null
   const editingParty = useMemo(
     () => parties.find((party) => party.id === editingId) ?? null,
     [editingId, parties],
@@ -122,7 +122,7 @@ export default function PartyFormPage() {
       },
       billingAddress: form.billingAddress,
       shippingAddresses: form.shippingAddresses.filter((address) => Object.values(address).some(Boolean)),
-      location: {
+      pathname: {
         latitude: form.latitude,
         longitude: form.longitude,
       },
@@ -146,7 +146,7 @@ export default function PartyFormPage() {
       toast(`${payload.name} added successfully`, 'success')
     }
 
-    navigate('/parties')
+    router.push('/parties')
     return true
   }
 
@@ -391,7 +391,7 @@ export default function PartyFormPage() {
       <footer className="erp-crm-footer">
         <div className="erp-crm-footer-hint">Escape returns to where you navigated from (or back stack). Ctrl + Enter saves without leaving the keyboard.</div>
         <div className="erp-crm-footer-actions">
-          <Button type="button" variant="ghost" size="sm" onClick={() => navigate('/parties')} style={CRM_GHOST_BTN}>Cancel</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => router.push('/parties')} style={CRM_GHOST_BTN}>Cancel</Button>
           <Button type="button" variant="primary" size="sm" data-party-submit="true" onClick={submitParty} style={CRM_PRIMARY_BUTTON}>{editingParty ? 'Save changes' : 'Create party'}</Button>
         </div>
       </footer>
@@ -424,8 +424,8 @@ function createInitialForm(party) {
       country: party?.billingAddress?.country || 'India',
     },
     shippingAddresses: party?.shippingAddresses?.length ? party.shippingAddresses : [emptyShippingAddress()],
-    latitude: party?.location?.latitude || '',
-    longitude: party?.location?.longitude || '',
+    latitude: party?.pathname?.latitude || '',
+    longitude: party?.pathname?.longitude || '',
     paymentTerms: party?.paymentTerms || 'Net 30',
     creditLimit: String(party?.creditLimit || ''),
     discountStructure: party?.discountStructure || '',

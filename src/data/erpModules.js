@@ -9,6 +9,12 @@ export const REPORT_MENU_ITEMS = [
   { id: 'gst-reports', path: '/reports/gst', label: 'GST Reports', reportId: 'gst' },
   { id: 'billwise-reports', path: '/reports/billwise', label: 'Bill-wise Profit', reportId: 'billwise' },
 ]
+export const BANKING_DEFINITIONS = [
+  { id: 'loan-accounts', path: '/banking/loan-accounts', label: 'Loan Accounts', name: 'Loan Accounts', desc: 'EMIs, balances and payment history.' },
+  { id: 'checks', path: '/banking/checks', label: 'Checks',name: 'checks', desc: 'Issue, deposit, clearance and bounce tracking.' },
+  { id: 'bank-accounts', path: '/banking/bank-accounts', label: 'Bank Accounts', name: 'Bank Accounts', desc: 'Balances, transactions and transfers.' },
+  { id: 'cash-in-hand', path: '/banking/cash-in-hand', label: 'Cash In Hand',name:'Cash In Hand', desc: 'Daily cashbook and operational cash flow.' },
+]
 
 // const AI_INTELLIGENCE_CHILDREN = [
 //   { id: 'ai-intelligence-overview', path: '/ai-intelligence', label: 'AI Intelligence Overview' },
@@ -28,17 +34,14 @@ export const ERP_SIDEBAR_ITEMS = [
     id: 'banking',
     label: 'Banking',
     icon: 'bank',
-    children: [
-      { id: 'loan-accounts', path: '/banking/loan-accounts', label: 'Loan Accounts' },
-      { id: 'checks', path: '/banking/checks', label: 'Checks' },
-      { id: 'bank-accounts', path: '/banking/bank-accounts', label: 'Bank Accounts' },
-      { id: 'cash-in-hand', path: '/banking/cash-in-hand', label: 'Cash In Hand' },
-    ],
+    path: '/banking',
+    children:BANKING_DEFINITIONS
   },
   {
     id: 'utilities',
     label: 'Important Utilities',
     icon: 'tools',
+    path: '/utilities',
     children: [
       { id: 'manage-companies', path: '/utilities/manage-companies', label: 'Manage Companies' },
       { id: 'backup-restore', path: '/utilities/backup-restore', label: 'Backup & Restore' },
@@ -121,12 +124,7 @@ export const AI_REPORT_DEFINITIONS = [
   { id: 'expense-analysis', path: '/ai-reports/expense-analysis', name: 'Expense Analysis', desc: 'Map cost categories against business scale.' },
 ]
 
-export const BANKING_DEFINITIONS = [
-  { id: 'loan-accounts', path: '/banking/loan-accounts', name: 'Loan Accounts', desc: 'EMIs, balances and payment history.' },
-  { id: 'checks', path: '/banking/checks', name: 'Checks', desc: 'Issue, deposit, clearance and bounce tracking.' },
-  { id: 'bank-accounts', path: '/banking/bank-accounts', name: 'Bank Accounts', desc: 'Balances, transactions and transfers.' },
-  { id: 'cash-in-hand', path: '/banking/cash-in-hand', name: 'Cash In Hand', desc: 'Daily cashbook and operational cash flow.' },
-]
+
 
 export const UTILITY_DEFINITIONS = [
   { id: 'manage-companies', path: '/utilities/manage-companies', name: 'Manage Companies', desc: 'Own companies, shared access and restore entry.' },
