@@ -61,9 +61,9 @@ export default function Topbar({
 
         <div style={{ display: compact ? 'none' : 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, color: 'var(--ink-20)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Quick Actions</span>
-          <button onClick={onNewInvoice} onMouseDown={suppressMouseDown} style={PRIMARY_ACTION_STYLE}>+ Invoice</button>
-          <button onClick={onNewPurchase} onMouseDown={suppressMouseDown} style={SECONDARY_ACTION_STYLE}>+ Purchase</button>
-          <button onClick={onNewParty} onMouseDown={suppressMouseDown} style={SECONDARY_ACTION_STYLE}>+ Party</button>
+          <button onClick={() => Router.push('/newInvoice')} onMouseDown={suppressMouseDown} style={PRIMARY_ACTION_STYLE}>+ Invoice</button>
+          <button onClick={() => Router.push('/newPurchase')} onMouseDown={suppressMouseDown} style={SECONDARY_ACTION_STYLE}>+ Purchase</button>
+          <button onClick={() => Router.push('/newParty')} onMouseDown={suppressMouseDown} style={SECONDARY_ACTION_STYLE}>+ Party</button>
         </div>
       </div>
 

@@ -1,8 +1,8 @@
 MY EXPLANATION
 
 
-*ok so i am facing some issue in making my Report section where i have to giv my Report dropdown a /report link but there is few problem cause drodown and /path having issue in it
-so first i check out where is my content is iwrite it down one by one
+*ok so i am facing some issue in making my Report section where i have to give my Report dropdown a /report link but there is few problem cause drodown and /path having issue in it
+so first i check out where is my content is writen it down one by one
 I go to erpModules.js file and give path:'/reports' to Id:report so that sidbar have context
 
 but again i got problem this only thing is not resolving the problem yet so after few time of research

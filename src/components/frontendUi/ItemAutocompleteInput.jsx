@@ -1,9 +1,9 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import useAutocomplete from '../../hooks/useAutocomplete.js'
-import { useApp } from '../../context/AppContext.js'
-import { useEscapeAction } from '../../context/EscapeContext.jsx'
-import { fmt } from '../../utils/helpers.js'
+import useAutocomplete from '@/hooks/useAutocomplete.js'
+import { useApp } from '@/context/AppContext'
+import { useEscapeAction } from '@/context/EscapeContext.jsx'
+import { fmt } from '@/utils/helpers.js'
 
 const inputStyle = {
   width: '100%',

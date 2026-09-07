@@ -1,5 +1,5 @@
 import BillwiseProfitReport from "@/components/reports/BillwiseProfitReport";
 
-export default function BillwisePage() {
+export default function CashFlowPage() {
   return <BillwiseProfitReport />;
 }

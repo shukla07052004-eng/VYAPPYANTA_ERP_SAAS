@@ -153,7 +153,7 @@ export default function BillwiseProfitReport() {
         }
       />
 
-      <Card style={{ marginBottom: 18, position: "sticky", top: 0, zIndex: 3 }}>
+      <Card style={{ marginBottom: 18, top: 0, zIndex: 3 }}>
         <CardHead title="Filters" sub="Filter by date, party, product, or bill number." />
         <CardBody style={{ display: "grid", gap: 14 }}>
           <FormGrid cols={5}>

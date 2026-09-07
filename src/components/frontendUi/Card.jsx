@@ -4,7 +4,7 @@
 import React from 'react'
 
 /* ── Card ─────────────────────────────────────────────────── */
-export function Card({ children, style = {}, className, onClick, ...props }) {
+export function Card({ children, style = {}, className, onClick, sectionEntry, ...props }) {
   return (
     <div
       className={className}
