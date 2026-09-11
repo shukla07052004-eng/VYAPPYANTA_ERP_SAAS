@@ -17,16 +17,20 @@ import Table       from '@/components/frontendUi/Table.jsx'
 import Modal       from '@/components/frontendUi/Modal.jsx'
 import Button      from '@/components/frontendUi/Button.jsx'
 import InvoiceView from '@/components/layout/InvoiceView.jsx'
+import ErpImportModal from '../../../components/layout/ErpImportModel'
+import { useRouter } from 'next/navigation'
 
 const FILTERS = ['All', 'Paid', 'Partial', 'Pending']
 
 export default function SalesPage({ onNewInvoice }) {
+  const router = useRouter()
   const { invoices, recordPayment } = useApp()
   const toast = useToast()
 
   const [search,      setSearch]      = useState('')
   const [filter,      setFilter]      = useState('All')
   const [viewInvoice, setViewInvoice] = useState(null)
+  const [importOpen,  setImportOpen]  = useState(false)
   const [payModal,    setPayModal]    = useState(null)   // invoice to pay
   const [payAmt,      setPayAmt]      = useState('')
   const [payMode,     setPayMode]     = useState('Cash')
@@ -136,13 +140,15 @@ export default function SalesPage({ onNewInvoice }) {
       {viewInvoice && (
         <InvoiceView invoice={viewInvoice} onClose={() => setViewInvoice(null)} />
       )}
+      <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="sales" />
 
       <PageHeader
         title="Sales"
         sub="Invoice management & receivables"
         right={
           <>
-            <Button variant="primary" onClick={onNewInvoice}>
+           <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
+            <Button variant="primary" onClick={()=>{router.push('/newInvoice')}}>
               + New Invoice
             </Button>
           </>

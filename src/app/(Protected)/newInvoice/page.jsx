@@ -85,6 +85,7 @@ export default function NewInvoicePage() {
       : null
   ), [activePreview.record, activePreview.type, invoices, itemMaster, purchases])
 
+  // i make a change hear inside of workspace-scroll-lock this class make it visible from hidden
   useEffect(() => {
     document.body.classList.add('workspace-scroll-lock')
     return () => document.body.classList.remove('workspace-scroll-lock')
@@ -207,16 +208,15 @@ export default function NewInvoicePage() {
     setPartyPreviewArmed(true)
   }, [])
 
-const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
+  const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
     setActivePreview(prev => {
         const previousId =
             prev?.record?.id ??
-            prev?.record?._id ??
             null
 
         const currentId =
             item?.id ??
-            item?._id ??
+
             null
 
         const currentRowIndex = rowIndex ?? null
@@ -235,7 +235,7 @@ const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
             rowIndex: currentRowIndex
         }
     })
-}, [])
+  }, [])
 
   const clearPreviewPanel = useCallback(() => {
     setActivePreview({ type: null, record: null, rowIndex: null })
@@ -343,6 +343,7 @@ const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
       advanceFromTaxField(rowIndex)
     }
   }, [advanceFromTaxField])
+
 
   const saveInvoice = useCallback(() => {
     const nextErrors = {}
@@ -469,10 +470,6 @@ const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
       event.preventDefault()
       if (isOpen && suggestions.length > 0) {
         const highlightedParty = suggestions[highlightedIndex] ?? suggestions[0]
-        if (!partyPreviewArmed) {
-          previewPartySelection(highlightedParty)
-          return
-        }
 
         commitPartySelection(highlightedParty)
         return
@@ -596,7 +593,7 @@ const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
         <section className="erp-workspace-band erp-workspace-band--header">
           <div className="erp-header-strip">
             <div className="erp-header-party">
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative'  }}>
                 <Input
                   ref={setHeaderRef(0)}
                   data-page-focus="invoice-party"
@@ -686,7 +683,7 @@ const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
 
         <section className="erp-workspace-band erp-workspace-band--grid">
           <div className="erp-grid-shell">
-            <div className="erp-grid-header" style={{ gridTemplateColumns: GRID_COLUMNS }}>
+            <div className="erp-grid-header" style={{ gridTemplateColumns: GRID_COLUMNS, position:'relative' }}>
               {['Sr', 'Item Name', 'HSN', 'Qty', 'Rate', 'Disc %', 'GST %', 'Amount'].map((label) => (
                 <div key={label} className="erp-grid-headcell">{label}</div>
               ))}
@@ -755,7 +752,7 @@ const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].qty = node
                             }}
-                            type="number"
+                          
                             min="0"
                             value={currentRow.qty}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -773,7 +770,7 @@ const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].rate = node
                             }}
-                            type="number"
+                            
                             min="0"
                             value={currentRow.rate}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -791,7 +788,7 @@ const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].discountPct = node
                             }}
-                            type="number"
+              
                             min="0"
                             value={currentRow.discountPct}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -932,7 +929,7 @@ const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
       </div>
     </div>
   )
-}
+};
 
 function SummaryRow({ label, value, large = false }) {
   return (

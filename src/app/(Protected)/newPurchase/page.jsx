@@ -635,7 +635,7 @@ export default function NewPurchasePage() {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].qty = node
                             }}
-                            type="number"
+                   
                             min="0"
                             value={currentRow.qty}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -653,7 +653,7 @@ export default function NewPurchasePage() {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].rate = node
                             }}
-                            type="number"
+                      
                             min="0"
                             value={currentRow.rate}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -671,7 +671,7 @@ export default function NewPurchasePage() {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].discountPct = node
                             }}
-                            type="number"
+                     
                             min="0"
                             value={currentRow.discountPct}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"

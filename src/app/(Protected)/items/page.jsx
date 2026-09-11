@@ -16,7 +16,7 @@ import Modal from '@/components/frontendUi/Modal.jsx'
 import { consumeSequentialEnter } from '@/utils/erpEnterNav.js'
 import { fmt, fmtShort, todayISO } from '@/utils/helpers.js'
 import {itemFormHeroStyle, heroMetaChipStyle, itemFieldStyle, sectionLabelStyle, selectorFrameStyle, productTypeSelectorStyle, productTypeValueStyle, productTypeHintStyle, gstArrowButtonStyle, alertCardStyle, gstSelectorStyle, gstValueStyle, stickyFooterStyle, formSectionStyle} from "./itemsCss"
-// import ErpImportModal from '@/components/import/ErpImportModal.jsx'
+import ErpImportModal from '@/components/layout/ErpImportModel'
 
 const STATUS_OPTIONS = ['Active', 'Inactive', 'Discontinued']
 const PRODUCT_TYPE_OPTIONS = ['Tablet', 'Capsule', 'Softgel', 'Syrup', 'Infusion', 'Injection', 'Other Goods']
@@ -47,13 +47,13 @@ export default function ItemsMasterPage() {
 
   return (
     <div className="animate-slide">
-      {/* <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="products" /> */}
+      <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="products" />
       <PageHeader
         title="Items"
         sub="Central inventory database for sales and purchase entry with fast keyboard-first search."
         right={(
           <>
-            {/* <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button> */}
+            <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
             <Button variant="primary" onClick={() => setEditor(createEmptyItem())}>+ Add Item</Button>
           </>
         )}

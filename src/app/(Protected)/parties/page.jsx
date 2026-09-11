@@ -13,6 +13,7 @@ import {
   Table,
 } from '@/components/frontendUi/index.js'
 import Button from '@/components/frontendUi/Button.jsx'
+import ErpImportModal from '@/components/layout/ErpImportModel'
 
 const PARTY_FILTERS = ['All', 'Customer', 'Supplier', 'Distributor', 'Carrier', 'Agent']
 
@@ -22,6 +23,7 @@ export default function PartiesPage() {
   const searchRef = useRef(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('All')
+  const [importOpen, setImportOpen] = useState(false)
 
   useEffect(() => {
     const handler = (event) => {
@@ -31,7 +33,7 @@ export default function PartiesPage() {
       }
       if (event.ctrlKey && event.key.toLowerCase() === 'n') {
         event.preventDefault()
-        router.push('/parties/new')
+        router.push('/newParty')
       }
     }
 
@@ -52,11 +54,15 @@ export default function PartiesPage() {
 
   return (
     <div className="animate-slide">
+      <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="parties" />
       <PageHeader
         title="Parties"
         sub="Keyboard-first party directory with full enterprise onboarding."
         right={(
-          <Button variant="primary" onClick={() => router.push('/parties/new')}>+ Add Party</Button>
+          <>
+            <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
+            <Button variant="primary" onClick={() => navigate('/parties/new')}>+ Add Party</Button>
+          </>
         )}
       />
 

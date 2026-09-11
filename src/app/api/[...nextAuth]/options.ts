@@ -6,7 +6,7 @@ import { Loginverify } from '@/schemas/loginverify';
 import bcrypt from "bcrypt"
 import GoogleProvider from "next-auth/providers/google";
 
-export const { handlers, auth, signIn } = NextAuth({
+export const { handlers, auth, signIn,signOut } = NextAuth({
     secret: process.env.NEXT_AUTH_SECRET,
     providers: [
         GoogleProvider({

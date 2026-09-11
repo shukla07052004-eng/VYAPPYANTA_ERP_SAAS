@@ -9,6 +9,8 @@ import { Card, CardBody, CardHead, FormGrid, Input, KpiCard, PageHeader, Select,
 import Button from '@/components/frontendUi/Button.jsx'
 import { fmt, fmtShort, todayISO } from '@/utils/helpers.js'
 
+const PRODUCT_TYPE_OPTIONS = ['Tablet', 'Capsule', 'Softgel', 'Syrup', 'Infusion', 'Injection', 'Other Goods']
+
 export default function UtilityModulePage() {
   const { modules: moduleId } = useParams()
   const router = useRouter()

@@ -11,7 +11,7 @@ import { Avatar, Badge } from '@/components/frontendUi/index.js'
 import Table from '@/components/frontendUi/Table.jsx'
 import InvoiceView from '@/components/layout/InvoiceView.jsx'
 import useFocusZone from '@/hooks/useFocusZone.js'
-
+import ErpImportModal from '@/components/layout/ErpImportModel'
 
 const DASHBOARD_TARGETS_STORAGE_KEY = 'bizledger.dashboard.targets'
 const TARGET_PRIORITY_OPTIONS = ['High', 'Medium', 'Low']
@@ -31,6 +31,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function Dashboard() {
   const { invoices, dashboard, company } = useApp()
   const [viewInvoice, setViewInvoice] = useState(null)
+  const [importOpen,  setImportOpen]  = useState(false)
   const [targets, setTargets] = useState(() => loadTargets())
   const [targetEditor, setTargetEditor] = useState(null)
   const targetFocus = useFocusZone({
@@ -105,9 +106,11 @@ export default function Dashboard() {
   return (
     <div className="animate-slide">
       {viewInvoice && <InvoiceView invoice={viewInvoice} onClose={() => setViewInvoice(null)} />}
+      <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="complete" />  
       <PageHeader
         title="Dashboard"
         sub={`FY ${company.fy} | ${company.name}`}
+        right={<Button variant="primary" onClick={() => setImportOpen(true)}>Import Data</Button>}
       />
 
       <div className="kpi-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>

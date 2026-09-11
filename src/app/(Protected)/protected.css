@@ -643,7 +643,7 @@ select {
 }
 
 .workspace-scroll-lock {
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
 .erp-workspace-shell,
@@ -726,9 +726,12 @@ select {
   display: grid;
   gap: 10px;
   align-content: start;
-  overflow: auto;
+  overflow: visible;
 }
 
+.erp-workspace-band--header {
+  overflow: visible;
+}
 .erp-header-actions {
   border-right: none;
   grid-auto-rows: min-content;
