@@ -27,6 +27,8 @@ export const ERP_SIDEBAR_ITEMS = [
   { id: 'purchase', path: '/purchase', label: 'Purchase', icon: 'cart' },
   { id: 'parties', path: '/parties', label: 'Parties', icon: 'parties' },
   { id: 'items', path: '/items', label: 'Items', icon: 'inventory' },
+  { id: 'dues', path: '/duepage', label: 'Dues', icon: 'wallet' },
+  { id: 'worker', path: '/worker', label: 'Workers', icon: 'parties' },
   { id: 'expense', path: '/expense', label: 'Expenses', icon: 'wallet' },
   { id: 'reports', path: '/reports', label: 'Reports', icon: 'analytics', children: REPORT_MENU_ITEMS },
   // { id: 'ai-intelligence', label: 'AI Intelligence', icon: 'spark', children: AI_INTELLIGENCE_CHILDREN },

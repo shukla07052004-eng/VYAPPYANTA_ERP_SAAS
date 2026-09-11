@@ -144,60 +144,60 @@ const ItemAutocompleteInput = forwardRef(function ItemAutocompleteInput({
 
   const dropdown = portalRoot && isOpen && suggestions.length > 0 && position
     ? createPortal(
-        <div
-          ref={dropdownRef}
-          data-item-suggestions={rowIndex}
-          style={{
-            position: 'fixed',
-            top: position.top,
-            left: position.left,
-            width: position.width,
-            maxHeight: position.maxHeight,
-            overflowY: 'auto',
-            background: '#fff',
-            border: '1px solid #111',
-            boxShadow: '0 14px 28px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.08)',
-            zIndex: PORTAL_Z_INDEX,
-          }}
-        >
-          {suggestions.map((item, index) => (
-            <button
-              key={`${item.id}-${index}`}
-              type="button"
-              style={{
-                ...suggestionButton,
-                background: highlightedIndex === index ? '#dbe8ff' : '#fff',
-              }}
-              onMouseDown={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                if (highlightedIndex === index && previewArmed) {
-                  selectItem(item)
-                  return
-                }
-                setHighlightedIndex(index)
-                onPreviewItem?.(item, { rowIndex })
-                setPreviewArmed(true)
-              }}
-              onDoubleClick={() => selectItem(item)}
-              onMouseEnter={() => {
-                setHighlightedIndex(index)
-                setPreviewArmed(false)
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 2 }}>
-                <strong style={{ fontSize: 12.5 }}>{item.name}</strong>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }}>{item.stockQty}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 11, color: '#555' }}>
-                <span>GST {item.gstSlab}% | Rate {fmt(item.lastRate)}</span>
-                <span style={recentLabelStyle}>{item.recent ? 'Recent' : 'Master'}</span>
-              </div>
-            </button>
-          ))}
-        </div>,
-        portalRoot,
-      )
+      <div
+        ref={dropdownRef}
+        data-item-suggestions={rowIndex}
+        style={{
+          position: 'fixed',
+          top: position.top,
+          left: position.left,
+          width: position.width,
+          maxHeight: position.maxHeight,
+          overflowY: 'auto',
+          background: '#fff',
+          border: '1px solid #111',
+          boxShadow: '0 14px 28px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.08)',
+          zIndex: PORTAL_Z_INDEX,
+        }}
+      >
+        {suggestions.map((item, index) => (
+          <button
+            key={`${item.id}-${index}`}
+            type="button"
+            style={{
+              ...suggestionButton,
+              background: highlightedIndex === index ? '#dbe8ff' : '#fff',
+            }}
+            onMouseDown={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              if (highlightedIndex === index && previewArmed) {
+                selectItem(item)
+                return
+              }
+              setHighlightedIndex(index)
+              onPreviewItem?.(item, { rowIndex })
+              setPreviewArmed(true)
+            }}
+            onDoubleClick={() => selectItem(item)}
+            onMouseEnter={() => {
+              setHighlightedIndex(index)
+              setPreviewArmed(false)
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 2 }}>
+              <strong style={{ fontSize: 12.5 }}>{item.name}</strong>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5 }}>{item.stockQty}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 11, color: '#555' }}>
+              <span>GST {item.gstSlab}% | Rate {fmt(item.lastRate)}</span>
+              <span style={recentLabelStyle}>{item.recent ? 'Recent' : 'Master'}</span>
+            </div>
+          </button>
+        ))}
+      </div>,
+      portalRoot,
+    )
     : null
 
   return (
@@ -238,16 +238,27 @@ const ItemAutocompleteInput = forwardRef(function ItemAutocompleteInput({
               }
             }
 
+            // if (event.key === 'Enter' && isOpen && suggestions.length > 0) {
+            //   event.preventDefault()
+            //   event.stopPropagation()
+            //   const highlightedItem = suggestions[highlightedIndex] ?? suggestions[0]
+            //   onPreviewItem?.(highlightedItem, { rowIndex })
+            //   if (previewArmed) {
+            //     selectItem(highlightedItem)
+            //     return
+            //   }
+            //   setPreviewArmed(true)
+            //   return
+            // }
+
             if (event.key === 'Enter' && isOpen && suggestions.length > 0) {
               event.preventDefault()
               event.stopPropagation()
-              const highlightedItem = suggestions[highlightedIndex] ?? suggestions[0]
-              onPreviewItem?.(highlightedItem, { rowIndex })
-              if (previewArmed) {
-                selectItem(highlightedItem)
-                return
-              }
-              setPreviewArmed(true)
+
+              const highlightedItem =
+                suggestions[highlightedIndex] ?? suggestions[0]
+
+              selectItem(highlightedItem)
               return
             }
 
