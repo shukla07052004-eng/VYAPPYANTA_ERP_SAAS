@@ -11,6 +11,8 @@ import { useEscapeAction } from '../../context/EscapeContext.jsx'
 import useFocusRestore from '../../hooks/useFocusRestore.js'
 
 export default function InvoiceView({ invoice, onClose }) {
+  if (!invoice) return null
+  
   const toast = useToast()
   const overlayRef = useRef(null)
   useFocusRestore({

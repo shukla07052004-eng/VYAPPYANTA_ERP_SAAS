@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext.jsx'
 import { BANKING_DEFINITIONS } from '@/data/erpModules.js'
-import { Card, CardBody, CardHead, FormGrid, Input, KpiCard, PageHeader, Select, Table, Textarea } from '@/components/frontendUi/index.js'
+import { Card, CardBody, CardHead, FormGrid, Input, KpiCard, Modal, PageHeader, Select, Table, Textarea } from '@/components/frontendUi/index.js'
 import Button from '@/components/frontendUi/Button.jsx'
 import { fmt, fmtShort, todayISO } from '@/utils/helpers.js'
 

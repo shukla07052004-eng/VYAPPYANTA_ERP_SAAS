@@ -61,7 +61,7 @@ export default function PartiesPage() {
         right={(
           <>
             <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
-            <Button variant="primary" onClick={() => navigate('/parties/new')}>+ Add Party</Button>
+            <Button variant="primary" onClick={() => router.push('/newParty')}>+ Add Party</Button>
           </>
         )}
       />

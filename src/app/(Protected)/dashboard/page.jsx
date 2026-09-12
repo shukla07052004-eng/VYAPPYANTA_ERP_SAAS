@@ -12,6 +12,7 @@ import Table from '@/components/frontendUi/Table.jsx'
 import InvoiceView from '@/components/layout/InvoiceView.jsx'
 import useFocusZone from '@/hooks/useFocusZone.js'
 import ErpImportModal from '@/components/layout/ErpImportModel'
+import PurchaseInvoiceView from '@/components/layout/PurchaseInvoiceView'
 
 const DASHBOARD_TARGETS_STORAGE_KEY = 'bizledger.dashboard.targets'
 const TARGET_PRIORITY_OPTIONS = ['High', 'Medium', 'Low']
@@ -30,10 +31,14 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function Dashboard() {
   const { invoices, dashboard, company } = useApp()
+
+  const [viewPO, setViewPO] = useState(null)  
   const [viewInvoice, setViewInvoice] = useState(null)
   const [importOpen,  setImportOpen]  = useState(false)
-  const [targets, setTargets] = useState(() => loadTargets())
+  const [targets, setTargets] = useState([])
   const [targetEditor, setTargetEditor] = useState(null)
+  const [mounted, setMounted] = useState(false)
+  
   const targetFocus = useFocusZone({
     orientation: 'vertical',
     onSelect: (node) => {
@@ -49,9 +54,17 @@ export default function Dashboard() {
     },
   })
 
+  // Load targets only after client hydration to avoid mismatch
   useEffect(() => {
-    window.localStorage.setItem(DASHBOARD_TARGETS_STORAGE_KEY, JSON.stringify(targets))
-  }, [targets])
+    setTargets(loadTargets())
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      window.localStorage.setItem(DASHBOARD_TARGETS_STORAGE_KEY, JSON.stringify(targets))
+    }
+  }, [targets, mounted])
 
   const recentTransactions = useMemo(() => dashboard.recentTransactions || [], [dashboard.recentTransactions])
 
@@ -105,6 +118,7 @@ export default function Dashboard() {
 
   return (
     <div className="animate-slide">
+      {viewPO && <PurchaseInvoiceView purchase={viewPO} onClose={() => setViewPO(null)} />}
       {viewInvoice && <InvoiceView invoice={viewInvoice} onClose={() => setViewInvoice(null)} />}
       <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="complete" />  
       <PageHeader
@@ -254,6 +268,7 @@ export default function Dashboard() {
           rows={recentTransactions}
           onRowClick={(row) => {
             if (row.type === 'Sale') setViewInvoice(row)
+            else if (row.type === 'Purchase') setViewPO(row)
           }}
         />
       </Card>

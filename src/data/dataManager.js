@@ -186,6 +186,7 @@ export function buildDashboardData(state, stock = deriveStockLedger(state.invoic
 }
 
 function normalizeTransaction(row = {}) {
+  // Sales have 'party' field
   if (row.party) {
     return {
       ...row,
@@ -196,16 +197,18 @@ function normalizeTransaction(row = {}) {
     }
   }
 
-  if (row.supplier) {
+  // Purchases have 'supplier' field or 'billNo' field
+  if (row.supplier || row.billNo) {
     return {
       ...row,
       type: 'Purchase',
-      partyName: row.supplier,
+      partyName: row.supplier || row.billFrom || 'Supplier',
       amount: Number(row.amount) || 0,
       reference: row.id || row.billNo,
     }
   }
 
+  // Everything else is an Expense
   return {
     ...row,
     type: 'Expense',
