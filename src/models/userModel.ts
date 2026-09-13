@@ -1,16 +1,16 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface Message extends Document {
-    content: string;
-    createdAt: Date;
-}
+// export interface Message extends Document {
+//     content: string;
+//     createdAt: Date;
+// }
 
-export const MessageSchema: Schema<Message> = new Schema({
-    content: {
-        type: String,
-        required: true
-    }
-});
+// export const MessageSchema: Schema<Message> = new Schema({
+//     content: {
+//         type: String,
+//         required: true
+//     }
+// });
 
 export interface User extends Document {
     username: string;
