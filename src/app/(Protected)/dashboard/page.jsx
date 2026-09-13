@@ -120,25 +120,28 @@ export default function Dashboard() {
     <div className="animate-slide">
       {viewPO && <PurchaseInvoiceView purchase={viewPO} onClose={() => setViewPO(null)} />}
       {viewInvoice && <InvoiceView invoice={viewInvoice} onClose={() => setViewInvoice(null)} />}
-      <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="complete" />  
-      <PageHeader
-        title="Dashboard"
-        sub={`FY ${company.fy} | ${company.name}`}
-        right={<Button variant="primary" onClick={() => setImportOpen(true)}>Import Data</Button>}
-      />
+      <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="complete" />
+      
+      {mounted && (
+        <>
+          <PageHeader
+            title="Dashboard"
+            sub={`FY ${company.fy} | ${company.name}`}
+            right={<Button variant="primary" onClick={() => setImportOpen(true)}>Import Data</Button>}
+          />
 
-      <div className="kpi-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
-        <KpiCard label="Total Sales" value={fmtShort(dashboard.totalSales)} sub={`${invoices.length} invoices`} />
-        <KpiCard label="Total Purchase" value={fmtShort(dashboard.totalPurchase)} sub="Imported and manual bills" />
-        <KpiCard label="Net Profit" value={fmtShort(dashboard.totalProfit)} sub="Sales minus purchase and expenses" trendUp={dashboard.totalProfit >= 0} />
-        <KpiCard label="Pending Payments" value={fmtShort(dashboard.pendingPayments)} sub={`${dashboard.stockAlerts?.length || 0} stock alerts`} />
-      </div>
+          <div className="kpi-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
+            <KpiCard label="Total Sales" value={fmtShort(dashboard.totalSales)} sub={`${invoices.length} invoices`} />
+            <KpiCard label="Total Purchase" value={fmtShort(dashboard.totalPurchase)} sub="Imported and manual bills" />
+            <KpiCard label="Net Profit" value={fmtShort(dashboard.totalProfit)} sub="Sales minus purchase and expenses" trendUp={dashboard.totalProfit >= 0} />
+            <KpiCard label="Pending Payments" value={fmtShort(dashboard.pendingPayments)} sub={`${dashboard.stockAlerts?.length || 0} stock alerts`} />
+          </div>
 
-      <div className="chart-target-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 16, marginBottom: 18 }}>
-        <Card>
-          <CardHead title="Revenue Overview" sub="Monthly trend for current and prior year." />
-          <CardBody>
-            <ResponsiveContainer width="100%" height={210}>
+          <div className="chart-target-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 16, marginBottom: 18 }}>
+            <Card>
+              <CardHead title="Revenue Overview" sub="Monthly trend for current and prior year." />
+              <CardBody>
+                <ResponsiveContainer width="100%" height={210}>
               <AreaChart data={dashboard.monthlyRevenue || []} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
@@ -158,120 +161,122 @@ export default function Dashboard() {
                 <Area type="monotone" dataKey="sales" name="Sales" stroke="#3b5bdb" strokeWidth={2.5} fill="url(#g1)" />
               </AreaChart>
             </ResponsiveContainer>
-          </CardBody>
-        </Card>
+              </CardBody>
+            </Card>
 
-        <Card>
-          <CardHead
-            title="Add Target"
-            sub={targetSummary.nearestDeadline ? `Next deadline ${targetSummary.nearestDeadline.deadline}` : 'Track priorities, deadlines and progress.'}
-            right={<Button size="sm" variant="primary" data-focus-item="true" data-target-action="create" onClick={() => setTargetEditor(createEmptyTarget())}>+ Add</Button>}
-          />
-          <CardBody style={{ display: 'grid', gap: 10 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <TargetMiniStat label="Open" value={targetSummary.openCount} />
-              <TargetMiniStat label="Completed" value={targetSummary.completedCount} />
-            </div>
-
-            <div ref={targetFocus.ref} style={{ display: 'grid', gap: 8 }}>
-              {targets.length > 0 ? targets.map((target) => {
-                const progress = computeTargetProgress(target)
-                return (
-                  <div
-                    key={target.id}
-                    data-focus-item="true"
-                    data-target-id={target.id}
-                    className="focusable-card"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setTargetEditor(target)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        setTargetEditor(target)
-                      }
-                    }}
-                    style={{
-                      border: '1px solid var(--border)',
-                      borderRadius: 'var(--r-md)',
-                      padding: '10px 11px',
-                      background: target.completed ? '#f6fbf7' : '#fff',
-                      display: 'grid',
-                      gap: 7,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: target.completed ? 'line-through' : 'none' }}>{target.title}</div>
-                        <div style={{ fontSize: 11.5, color: 'var(--ink-40)' }}>{target.deadline || 'No deadline'} | {target.priority}</div>
-                      </div>
-                      <StatusPill label={target.completed ? 'Done' : target.priority} tone={target.completed ? 'done' : target.priority.toLowerCase()} />
-                    </div>
-
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: 'var(--ink-40)', marginBottom: 4 }}>
-                        <span>{fmt(target.currentValue)} of {fmt(target.targetValue)}</span>
-                        <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{progress}%</span>
-                      </div>
-                      <div style={{ height: 6, borderRadius: 999, background: 'var(--surface-3)', overflow: 'hidden' }}>
-                        <div style={{ width: `${progress}%`, height: '100%', background: target.completed ? '#1a6b3c' : '#111827', borderRadius: 999, transition: 'width .16s ease' }} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                      <div style={{ fontSize: 11.5, color: 'var(--ink-40)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {target.notes || 'Enter opens target editor'}
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          tabIndex={-1}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            toggleTargetCompleted(target.id)
-                          }}
-                        >
-                          {target.completed ? 'Reopen' : 'Done'}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          tabIndex={-1}
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            setTargetEditor(target)
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              }) : (
-                <div style={{ border: '1px dashed var(--border-2)', borderRadius: 'var(--r-md)', padding: '18px 14px', textAlign: 'center', color: 'var(--ink-40)', fontSize: 12 }}>
-                  Targets will appear here. Use <strong style={{ color: 'var(--ink)' }}>Add</strong> to create your first dashboard goal.
+            <Card>
+              <CardHead
+                title="Add Target"
+                sub={targetSummary.nearestDeadline ? `Next deadline ${targetSummary.nearestDeadline.deadline}` : 'Track priorities, deadlines and progress.'}
+                right={<Button size="sm" variant="primary" data-focus-item="true" data-target-action="create" onClick={() => setTargetEditor(createEmptyTarget())}>+ Add</Button>}
+              />
+              <CardBody style={{ display: 'grid', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <TargetMiniStat label="Open" value={targetSummary.openCount} />
+                  <TargetMiniStat label="Completed" value={targetSummary.completedCount} />
                 </div>
-              )}
-            </div>
-          </CardBody>
-        </Card>
-      </div>
 
-      <Card>
-        <CardHead title="Recent Transactions" sub="Latest sales, purchases, and expenses." />
-        <Table
-          focusId="dashboard-recent-invoices"
-          cols={cols}
+                <div ref={targetFocus.ref} style={{ display: 'grid', gap: 8 }}>
+                  {targets.length > 0 ? targets.map((target) => {
+                    const progress = computeTargetProgress(target)
+                    return (
+                      <div
+                        key={target.id}
+                        data-focus-item="true"
+                        data-target-id={target.id}
+                        className="focusable-card"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setTargetEditor(target)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            setTargetEditor(target)
+                          }
+                        }}
+                        style={{
+                          border: '1px solid var(--border)',
+                          borderRadius: 'var(--r-md)',
+                          padding: '10px 11px',
+                          background: target.completed ? '#f6fbf7' : '#fff',
+                          display: 'grid',
+                          gap: 7,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: target.completed ? 'line-through' : 'none' }}>{target.title}</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--ink-40)' }}>{target.deadline || 'No deadline'} | {target.priority}</div>
+                          </div>
+                          <StatusPill label={target.completed ? 'Done' : target.priority} tone={target.completed ? 'done' : target.priority.toLowerCase()} />
+                        </div>
+
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: 'var(--ink-40)', marginBottom: 4 }}>
+                            <span>{fmt(target.currentValue)} of {fmt(target.targetValue)}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{progress}%</span>
+                          </div>
+                          <div style={{ height: 6, borderRadius: 999, background: 'var(--surface-3)', overflow: 'hidden' }}>
+                            <div style={{ width: `${progress}%`, height: '100%', background: target.completed ? '#1a6b3c' : '#111827', borderRadius: 999, transition: 'width .16s ease' }} />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                          <div style={{ fontSize: 11.5, color: 'var(--ink-40)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {target.notes || 'Enter opens target editor'}
+                          </div>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              tabIndex={-1}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                toggleTargetCompleted(target.id)
+                              }}
+                            >
+                              {target.completed ? 'Reopen' : 'Done'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              tabIndex={-1}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setTargetEditor(target)
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }) : (
+                    <div style={{ border: '1px dashed var(--border-2)', borderRadius: 'var(--r-md)', padding: '18px 14px', textAlign: 'center', color: 'var(--ink-40)', fontSize: 12 }}>
+                      Targets will appear here. Use <strong style={{ color: 'var(--ink)' }}>Add</strong> to create your first dashboard goal.
+                    </div>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHead title="Recent Transactions" sub="Latest sales, purchases, and expenses." />
+            <Table
+              focusId="dashboard-recent-invoices"
+              cols={cols}
           rows={recentTransactions}
           onRowClick={(row) => {
             if (row.type === 'Sale') setViewInvoice(row)
             else if (row.type === 'Purchase') setViewPO(row)
           }}
-        />
-      </Card>
+            />
+          </Card>
+        </>
+      )}
 
       <TargetEditorModal
         value={targetEditor}

@@ -3,6 +3,7 @@ import React, { useRef, useState } from 'react'
 import { useApp }      from '@/context/AppContext.jsx'
 import { useToast }    from '@/context/ToastContext.jsx'
 import { fmt, fmtShort, todayISO } from '@/utils/helpers.js'
+import useHydration from '@/hooks/useHydration.js'
 import {
   KpiCard, PageHeader, Card, CardHead,
 } from '@/components/frontendUi/index.js'
@@ -31,6 +32,7 @@ const CELL_INPUT = {
 export default function PurchasePage({ onNewPurchase }) {
   const router = useRouter();
   const { purchases, addPurchase, parties } = useApp()
+  const mounted = useHydration()
   const [importOpen, setImportOpen] = useState(false)
   const toast = useToast()
   const [open, setOpen] = useState(false)
@@ -145,29 +147,33 @@ export default function PurchasePage({ onNewPurchase }) {
   return (
     <div className="animate-slide">
       {viewPO && <PurchaseInvoiceView purchase={viewPO} onClose={() => setViewPO(null)} />}
-      <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="purchases" />        
+      <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="purchases" />
 
-      <PageHeader
-        title="Purchase"
-        sub="Keyboard-first purchase entry aligned with the invoice workflow."
-        right={(
-          <>
-          <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
-          <Button variant="primary" onClick={() => router.push('/newPurchase')}>+ New Purchase</Button>
-          </>
-        )}
-      />
-      <div className="kpi-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
-        <KpiCard label="This Month" value={fmtShort(totalAll)} sub={`${purchases.length} orders`} />
-        <KpiCard label="Unpaid" value={fmtShort(totalUnpaid)} />
-        <KpiCard label="Paid" value={fmtShort(totalPaid)} />
-        <KpiCard label="Suppliers" value={supplierParties.length} sub="Active vendors" />
-      </div>
+      {mounted && (
+        <>
+          <PageHeader
+            title="Purchase"
+            sub="Keyboard-first purchase entry aligned with the invoice workflow."
+            right={(
+              <>
+              <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
+              <Button variant="primary" onClick={() => router.push('/newPurchase')}>+ New Purchase</Button>
+              </>
+            )}
+          />
+          <div className="kpi-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
+            <KpiCard label="This Month" value={fmtShort(totalAll)} sub={`${purchases.length} orders`} />
+            <KpiCard label="Unpaid" value={fmtShort(totalUnpaid)} />
+            <KpiCard label="Paid" value={fmtShort(totalPaid)} />
+            <KpiCard label="Suppliers" value={supplierParties.length} sub="Active vendors" />
+          </div>
 
-      <Card>
-        <CardHead title="Purchase Orders" right={<div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}><SearchInput value={search} onChange={setSearch} placeholder="Search supplier or bill…" /><FilterPills options={['All', 'Paid', 'Partial', 'Unpaid']} value={filter} onChange={setFilter} /></div>} />
-        <Table focusId="purchase-list" cols={cols} rows={filtered} onRowClick={setViewPO} emptyMsg="No purchase orders found" />
-      </Card>
+          <Card>
+            <CardHead title="Purchase Orders" right={<div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}><SearchInput value={search} onChange={setSearch} placeholder="Search supplier or bill…" /><FilterPills options={['All', 'Paid', 'Partial', 'Unpaid']} value={filter} onChange={setFilter} /></div>} />
+            <Table focusId="purchase-list" cols={cols} rows={filtered} onRowClick={setViewPO} emptyMsg="No purchase orders found" />
+          </Card>
+        </>
+      )}
 
       <Modal open={open} onClose={() => setOpen(false)} title="New Purchase Order">
         <FormGrid cols={2}>

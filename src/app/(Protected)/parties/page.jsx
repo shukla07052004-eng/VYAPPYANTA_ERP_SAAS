@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApp } from '@/context/AppContext.jsx'
 import { fmt, fmtShort } from '@/utils/helpers.js'
+import useHydration from '@/hooks/useHydration.js'
 import {
   Card,
   CardHead,
@@ -20,6 +21,7 @@ const PARTY_FILTERS = ['All', 'Customer', 'Supplier', 'Distributor', 'Carrier', 
 export default function PartiesPage() {
   const router = useRouter()
   const { parties } = useApp()
+  const mounted = useHydration()
   const searchRef = useRef(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('All')
@@ -55,33 +57,36 @@ export default function PartiesPage() {
   return (
     <div className="animate-slide">
       <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="parties" />
-      <PageHeader
-        title="Parties"
-        sub="Keyboard-first party directory with full enterprise onboarding."
-        right={(
-          <>
-            <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
-            <Button variant="primary" onClick={() => router.push('/newParty')}>+ Add Party</Button>
-          </>
-        )}
-      />
+      
+      {mounted && (
+        <>
+          <PageHeader
+            title="Parties"
+            sub="Keyboard-first party directory with full enterprise onboarding."
+            right={(
+              <>
+                <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
+                <Button variant="primary" onClick={() => router.push('/newParty')}>+ Add Party</Button>
+              </>
+            )}
+          />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
-        <KpiCard label="Total Parties" value={parties.length} sub="Active accounts" />
-        <KpiCard label="Total Receivable" value={fmtShort(totalDR)} />
-        <KpiCard label="Total Payable" value={fmtShort(totalCR)} />
-      </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
+            <KpiCard label="Total Parties" value={parties.length} sub="Active accounts" />
+            <KpiCard label="Total Receivable" value={fmtShort(totalDR)} />
+            <KpiCard label="Total Payable" value={fmtShort(totalCR)} />
+          </div>
 
-      <Card>
-        <CardHead
-          title="All Parties"
-          right={(
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <SearchInput inputRef={searchRef} value={search} onChange={setSearch} placeholder="Search parties..." />
-              <FilterPills options={PARTY_FILTERS} value={filter} onChange={setFilter} />
-            </div>
-          )}
-        />
+          <Card>
+            <CardHead
+              title="All Parties"
+              right={(
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <SearchInput inputRef={searchRef} value={search} onChange={setSearch} placeholder="Search parties..." />
+                  <FilterPills options={PARTY_FILTERS} value={filter} onChange={setFilter} />
+                </div>
+              )}
+            />
         <Table
           focusId="parties-list"
           cols={[
@@ -110,8 +115,10 @@ export default function PartiesPage() {
             },
           ]}
           rows={filteredParties}
-        />
-      </Card>
+            />
+          </Card>
+        </>
+      )}
     </div>
   )
 }

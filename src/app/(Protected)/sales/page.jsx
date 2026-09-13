@@ -7,6 +7,7 @@ import React, { useState } from 'react'
 import { useApp }      from '@/context/AppContext.jsx'
 import { useToast }    from '@/context/ToastContext.jsx'
 import { fmt, fmtShort } from '@/utils/helpers.js'
+import useHydration from '@/hooks/useHydration.js'
 import {
   KpiCard, PageHeader, Card, CardHead,
 } from '@/components/frontendUi/index.js'
@@ -26,6 +27,7 @@ export default function SalesPage({ onNewInvoice }) {
   const router = useRouter()
   const { invoices, recordPayment } = useApp()
   const toast = useToast()
+  const mounted = useHydration()
 
   const [search,      setSearch]      = useState('')
   const [filter,      setFilter]      = useState('All')
@@ -142,37 +144,39 @@ export default function SalesPage({ onNewInvoice }) {
       )}
       <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="sales" />
 
-      <PageHeader
-        title="Sales"
-        sub="Invoice management & receivables"
-        right={
-          <>
-           <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
-            <Button variant="primary" onClick={()=>{router.push('/newInvoice')}}>
-              + New Invoice
-            </Button>
-          </>
-        }
-      />
+      {mounted && (
+        <>
+          <PageHeader
+            title="Sales"
+            sub="Invoice management & receivables"
+            right={
+              <>
+               <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
+                <Button variant="primary" onClick={()=>{router.push('/newInvoice')}}>
+                  + New Invoice
+                </Button>
+              </>
+            }
+          />
 
-      {/* KPIs */}
-      <div className="kpi-grid-4" style={{
-        display:             'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap:                 14,
-        marginBottom:        22,
-      }}>
-        <KpiCard label="Total Billed"   value={fmtShort(totalBilled)}  sub={`${invoices.length} invoices`} />
-        <KpiCard label="Collected"      value={fmtShort(totalPaid)}    />
-        <KpiCard label="Outstanding"    value={fmtShort(outstanding)}  sub={`${overdueCount} unpaid`} />
-        <KpiCard label="Overdue"        value={fmtShort(outstanding)}  sub={`${overdueCount} invoice${overdueCount === 1 ? '' : 's'}`} />
-      </div>
+          {/* KPIs */}
+          <div className="kpi-grid-4" style={{
+            display:             'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap:                 14,
+            marginBottom:        22,
+          }}>
+            <KpiCard label="Total Billed"   value={fmtShort(totalBilled)}  sub={`${invoices.length} invoices`} />
+            <KpiCard label="Collected"      value={fmtShort(totalPaid)}    />
+            <KpiCard label="Outstanding"    value={fmtShort(outstanding)}  sub={`${overdueCount} unpaid`} />
+            <KpiCard label="Overdue"        value={fmtShort(outstanding)}  sub={`${overdueCount} invoice${overdueCount === 1 ? '' : 's'}`} />
+          </div>
 
-      <Card>
-        <CardHead
-          title="All Invoices"
-          right={
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Card>
+            <CardHead
+              title="All Invoices"
+              right={
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
               <SearchInput
                 value={search}
                 onChange={setSearch}
@@ -192,8 +196,10 @@ export default function SalesPage({ onNewInvoice }) {
           rows={filtered}
           onRowClick={setViewInvoice}
           emptyMsg="No invoices match your search"
-        />
-      </Card>
+            />
+          </Card>
+        </>
+      )}
 
       {/* Payment modal */}
       {payModal && (

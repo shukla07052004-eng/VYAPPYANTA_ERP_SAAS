@@ -10,6 +10,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '@/context/AppContext.jsx'
+import useHydration from '@/hooks/useHydration.js'
 import { Card, CardBody, CardHead, FormGrid, Input, KpiCard, PageHeader, Select, Table, Textarea } from '@/components/frontendUi/index.js'
 import Button from '@/components/frontendUi/Button.jsx'
 import Modal from '@/components/frontendUi/Modal.jsx'
@@ -28,6 +29,7 @@ let lastSelectedGstSlab = 12
 
 export default function ItemsMasterPage() {
   const { itemMaster, addItem, updateItem, deleteItem, touchRecentItem } = useApp()
+  const mounted = useHydration()
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('All Product Types')
   const [editor, setEditor] = useState(null)
@@ -48,49 +50,54 @@ export default function ItemsMasterPage() {
   return (
     <div className="animate-slide">
       <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="products" />
-      <PageHeader
-        title="Items"
-        sub="Central inventory database for sales and purchase entry with fast keyboard-first search."
-        right={(
-          <>
-            <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
-            <Button variant="primary" onClick={() => setEditor(createEmptyItem())}>+ Add Item</Button>
-          </>
-        )}
-      />
+      
+      {mounted && (
+        <>
+          <PageHeader
+            title="Items"
+            sub="Central inventory database for sales and purchase entry with fast keyboard-first search."
+            right={(
+              <>
+                <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
+                <Button variant="primary" onClick={() => setEditor(createEmptyItem())}>+ Add Item</Button>
+              </>
+            )}
+          />
 
-      <Card style={{ marginBottom: 14 }}>
-        <CardBody style={{ padding: '12px 14px', position: 'sticky', top: 0, zIndex: 5, background: 'var(--surface)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 360px) 200px', gap: 10, alignItems: 'end', justifyContent: 'start' }}>
-            <Input label="Search Items" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search item, batch no., code or barcode" />
-            <Select label="Product Type" value={category} onChange={(event) => setCategory(event.target.value)} options={['All Product Types', ...PRODUCT_TYPE_OPTIONS]} />
-          </div>
-        </CardBody>
-      </Card>
+          <Card style={{ marginBottom: 14 }}>
+            <CardBody style={{ padding: '12px 14px', position: 'sticky', top: 0, zIndex: 5, background: 'var(--surface)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 360px) 200px', gap: 10, alignItems: 'end', justifyContent: 'start' }}>
+                <Input label="Search Items" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search item, batch no., code or barcode" />
+                <Select label="Product Type" value={category} onChange={(event) => setCategory(event.target.value)} options={['All Product Types', ...PRODUCT_TYPE_OPTIONS]} />
+              </div>
+            </CardBody>
+          </Card>
 
-      <Card>
-        <CardHead title="Items Master Table" sub="Compact ERP-style table with direct edit actions and minimal chrome." />
-        <Table
-          focusId="items-master-table"
-          onRowClick={(row) => {
-            touchRecentItem(row.id, 'edited')
-            setEditor(row)
-          }}
-          cols={[
-            { key: 'name', label: 'Item Name', bold: true },
-            { key: 'category', label: 'Category' },
-            { key: 'batchNo', label: 'Batch No.', mono: true, dim: true, render: (value) => value || '—' },
-            { key: 'expiryDate', label: 'Expiry Date', render: (_, row) => <ExpiryCell item={row} /> },
-            { key: 'gstSlab', label: 'GST', right: true, render: (value) => `${value}%` },
-            { key: 'stockQty', label: 'Stock', right: true },
-            { key: 'purchasePrice', label: 'Purchase Price', right: true, render: (value) => fmt(value) },
-            { key: 'salesPrice', label: 'Sale Price', right: true, render: (value) => fmt(value) },
-            { key: '_act', label: '', sortable: false, render: (_, row) => <ActionCell onEdit={() => { touchRecentItem(row.id, 'edited'); setEditor(row) }} onDelete={() => deleteItem(row.id)} /> },
-          ]}
-          rows={filtered}
-          emptyMsg="No items found for this filter."
-        />
-      </Card>
+          <Card>
+            <CardHead title="Items Master Table" sub="Compact ERP-style table with direct edit actions and minimal chrome." />
+            <Table
+              focusId="items-master-table"
+              onRowClick={(row) => {
+                touchRecentItem(row.id, 'edited')
+                setEditor(row)
+              }}
+              cols={[
+                { key: 'name', label: 'Item Name', bold: true },
+                { key: 'category', label: 'Category' },
+                { key: 'batchNo', label: 'Batch No.', mono: true, dim: true, render: (value) => value || '—' },
+                { key: 'expiryDate', label: 'Expiry Date', render: (_, row) => <ExpiryCell item={row} /> },
+                { key: 'gstSlab', label: 'GST', right: true, render: (value) => `${value}%` },
+                { key: 'stockQty', label: 'Stock', right: true },
+                { key: 'purchasePrice', label: 'Purchase Price', right: true, render: (value) => fmt(value) },
+                { key: 'salesPrice', label: 'Sale Price', right: true, render: (value) => fmt(value) },
+                { key: '_act', label: '', sortable: false, render: (_, row) => <ActionCell onEdit={() => { touchRecentItem(row.id, 'edited'); setEditor(row) }} onDelete={() => deleteItem(row.id)} /> },
+              ]}
+              rows={filtered}
+              emptyMsg="No items found for this filter."
+            />
+          </Card>
+        </>
+      )}
 
       <ItemEditorModal
         value={editor}

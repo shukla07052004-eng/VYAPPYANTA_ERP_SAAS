@@ -2,6 +2,7 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useApp } from '@/context/AppContext.jsx'
+import useHydration from '@/hooks/useHydration.js'
 import { buildReportState } from '@/data/reportUtils.js'
 import { Button, Card, CardBody, CardHead, FormGrid, Input, KpiCard, Modal, PageHeader, Select, Table, Textarea } from '@/components/frontendUi/index.js'
 import { downloadCsv, fmt, fmtShort, printTextReport, todayISO } from '@/utils/helpers.js'
@@ -52,6 +53,7 @@ function exportExpenseWorkbook(rows, summaryLabel) {
 
 export default function ExpenseManagementPage() {
   const { expenses, addExpense, invoices, purchases, parties, itemMaster } = useApp()
+  const mounted = useHydration()
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)

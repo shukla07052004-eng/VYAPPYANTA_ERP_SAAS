@@ -1057,7 +1057,7 @@ const ItemInfoPanel = React.memo(function ItemInfoPanel({ info }) {
             </thead>
             <tbody>
               {info.lastSales.map((sale) => (
-                <tr key={`${sale.invoiceNo}-${sale.date}-${sale.customer}`}>
+               <tr key={sale.id}>
                   <td>{sale.date}</td>
                   <td>{sale.invoiceNo}</td>
                   <td>{sale.customer}</td>
