@@ -4,7 +4,7 @@ import { createInvoiceRecord } from '../data/salesData.js'
 import { createPartyRecord } from '../data/partyData.js'
 import { createPurchaseRecord } from '../data/purchaseData.js'
 import { createExpenseRecord } from '../data/expenseData.js'
-import { loadErpState, saveErpState } from '../data/store.js'
+import { loadErpState, saveErpState, getDefaultErpState } from '../data/store.js'
 import {
   buildNormalizedErpData,
   importErpData,
@@ -115,7 +115,11 @@ function buildInitialItemMaster({ sales, purchases }) {
 }
 
 export function AppProvider({ children }) {
-  const initialErpState = useMemo(() => normalizePersistedState(loadErpState()), [])
+  // const initialErpState = useMemo(() => normalizePersistedState(loadErpState()), [])
+  const initialErpState = useMemo(
+  () => normalizePersistedState(getDefaultErpState()),
+  []
+)
   const [invoices, setInvoices] = useState(initialErpState.invoices)
   const [parties, setParties] = useState(initialErpState.parties)
   const [purchases, setPurchases] = useState(initialErpState.purchases)

@@ -1,47 +1,47 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface Target extends Document {
-    targetName: string;
+    title: string;
     targetValue: number;
-    currentProgress: number;
+    currentValue: number;
     deadline: Date;
-    priority:Array<string>;
-    status: Array<string>;
-    notes:string;
+    priority: string;
+    completed: string;
+    notes: string;
 }
 
 const TargetSchema: Schema<Target> = new Schema(
     {
-        targetName: {
+        title: {
             type: String,
             required: true,
             lowercase: true,
             trim: true
         },
-        targetValue:{
-            type:Number,
+        targetValue: {
+            type: Number,
             required: true,
-            trim:true
         },
-        currentProgress:{
-            type:Number,
+        currentValue: {
+            type: Number,
             required: true,
-            trim:true
         },
-        deadline:{
-            type:Date,
-            required:true
+        deadline: {
+            type: Date,
+            required: true
         },
-        priority:{
-            enum:["High","Medium","Low"],
-            required:true
+        priority: {
+            type: String,
+            enum: ["High", "Medium",     "Low"],
+            required: true
         },
-        status:{
-            enum:["open","completed"],
-            required:true
+        completed: {
+            type: String,
+            required: true,
+            enum:['Open', 'Completed']
         },
-        notes:{
-            type:String
+        notes: {
+            type: String,
         }
 
     },

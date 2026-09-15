@@ -14,8 +14,8 @@ import useFocusZone from '@/hooks/useFocusZone.js'
 import ErpImportModal from '@/components/layout/ErpImportModel'
 import PurchaseInvoiceView from '@/components/layout/PurchaseInvoiceView'
 
-const DASHBOARD_TARGETS_STORAGE_KEY = 'bizledger.dashboard.targets'
 const TARGET_PRIORITY_OPTIONS = ['High', 'Medium', 'Low']
+const COMPLETED_OPTIONS = ['Open', 'Completed']
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
@@ -32,20 +32,26 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function Dashboard() {
   const { invoices, dashboard, company } = useApp()
 
-  const [viewPO, setViewPO] = useState(null)  
+  const [viewPO, setViewPO] = useState(null)
   const [viewInvoice, setViewInvoice] = useState(null)
-  const [importOpen,  setImportOpen]  = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [targets, setTargets] = useState([])
   const [targetEditor, setTargetEditor] = useState(null)
-  const [mounted, setMounted] = useState(false)
-  
+
   const targetFocus = useFocusZone({
     orientation: 'vertical',
     onSelect: (node) => {
       const targetId = node?.getAttribute('data-target-id')
+
       if (targetId) {
-        const existing = targets.find((target) => target.id === targetId)
-        if (existing) setTargetEditor(existing)
+        const existing = targets.find(
+          (target) => target._id === targetId
+        )
+
+        if (existing) {
+          setTargetEditor(existing)
+        }
+
         return
       }
       if (node?.getAttribute('data-target-action') === 'create') {
@@ -56,15 +62,35 @@ export default function Dashboard() {
 
   // Load targets only after client hydration to avoid mismatch
   useEffect(() => {
-    setTargets(loadTargets())
-    setMounted(true)
-  }, [])
+    async function fetchTargets() {
+      try {
+        const response = await fetch("/api/dashboardTarget");
 
-  useEffect(() => {
-    if (mounted) {
-      window.localStorage.setItem(DASHBOARD_TARGETS_STORAGE_KEY, JSON.stringify(targets))
+        const result = await response.json();
+        console.log(result)
+
+        if (!response.ok) {
+          throw new Error(
+            result.message || "Failed to load targets"
+          );
+        }
+
+        const normalizedTargets = Array.isArray(result.data)
+          ? result.data
+            .filter(Boolean)
+            .map(normalizeTarget)
+          : [];
+
+        setTargets(normalizedTargets);
+
+      } catch (error) {
+        console.error("Failed to load targets:", error);
+        setTargets([]);
+      }
     }
-  }, [targets, mounted])
+
+    fetchTargets();
+  }, []);
 
   const recentTransactions = useMemo(() => dashboard.recentTransactions || [], [dashboard.recentTransactions])
 
@@ -91,192 +117,301 @@ export default function Dashboard() {
     { key: 'status', label: 'Status', render: (value) => <Badge status={value} /> },
   ]
 
-  const saveTarget = (payload) => {
-    const nextTarget = normalizeTarget(payload)
-    setTargets((current) => {
-      const exists = current.some((target) => target.id === nextTarget.id)
-      return exists
-        ? current.map((target) => (target.id === nextTarget.id ? nextTarget : target))
-        : [nextTarget, ...current]
-    })
-    setTargetEditor(null)
-  }
+  const saveTarget = async (payload) => {
+    console.log("SAVE TARGET PAYLOAD:", payload);
 
-  const deleteTarget = (targetId) => {
-    setTargets((current) => current.filter((target) => target.id !== targetId))
-    setTargetEditor((current) => (current?.id === targetId ? null : current))
-  }
+    const nextTarget = normalizeTarget(payload);
 
-  const toggleTargetCompleted = (targetId) => {
-    setTargets((current) => current.map((target) => (
-      target.id === targetId
-        ? { ...target, completed: !target.completed }
-        : target
-    )))
-    setTargetEditor((current) => current?.id === targetId ? { ...current, completed: !current.completed } : current)
-  }
+    try {
+      // Existing target = PATCH
+      // New target = POST
+      const method = nextTarget._id ? "PATCH" : "POST";
+
+      const response = await fetch("/api/dashboardTarget", {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(nextTarget),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.message || "Failed to save target"
+        );
+      }
+
+      const savedTarget = normalizeTarget(
+        result.data || result.updatedTarget
+      );
+
+      setTargets((current) => {
+        const exists = current.some(
+          (target) => target._id === savedTarget._id
+        );
+
+        return exists
+          ? current.map((target) =>
+            target._id === savedTarget._id
+              ? savedTarget
+              : target
+          )
+          : [savedTarget, ...current];
+      });
+
+      setTargetEditor(null);
+
+    } catch (error) {
+      console.error("Failed to save target:", error);
+    }
+  };
+
+
+  const deleteTarget = async (targetId) => {
+    try {
+      console.log("ID before sending:", targetId);
+
+      const response = await fetch(
+        `/api/dashboardTarget?id=${encodeURIComponent(targetId)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const result = await response.json();
+
+      console.log("Backend response:", result);
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to delete target");
+      }
+
+      setTargets((current) =>
+        current.filter((target) => target._id !== targetId)
+      );
+
+      setTargetEditor((current) =>
+        current?._id === targetId ? null : current
+      );
+
+    } catch (error) {
+      console.error("Delete target error:", error);
+    }
+  };
+
+  const toggleTargetCompleted = async (targetId) => {
+    const target = targets.find(
+      (target) => target._id === targetId
+    );
+
+    if (!target) return;
+
+    const newCompleted =
+      target.completed === "Completed"
+        ? "Open"
+        : "Completed";
+
+    try {
+      const response = await fetch("/api/dashboardTarget", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          _id: targetId,
+          completed: newCompleted,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result.message || "Failed to update status"
+        );
+      }
+
+      const updatedTarget = normalizeTarget(result.data);
+
+      setTargets((current) =>
+        current.map((target) =>
+          target._id === targetId
+            ? updatedTarget
+            : target
+        )
+      );
+
+      setTargetEditor((current) =>
+        current?._id === targetId
+          ? updatedTarget
+          : current
+      );
+
+    } catch (error) {
+      console.error("Failed to update target status:", error);
+    }
+  };
 
   return (
     <div className="animate-slide">
       {viewPO && <PurchaseInvoiceView purchase={viewPO} onClose={() => setViewPO(null)} />}
       {viewInvoice && <InvoiceView invoice={viewInvoice} onClose={() => setViewInvoice(null)} />}
       <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="complete" />
-      
-      {mounted && (
-        <>
-          <PageHeader
-            title="Dashboard"
-            sub={`FY ${company.fy} | ${company.name}`}
-            right={<Button variant="primary" onClick={() => setImportOpen(true)}>Import Data</Button>}
-          />
+      <>
+        <PageHeader
+          title="Dashboard"
+          sub={`FY ${company.fy} | ${company.name}`}
+          right={<Button variant="primary" onClick={() => setImportOpen(true)}>Import Data</Button>}
+        />
 
-          <div className="kpi-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
-            <KpiCard label="Total Sales" value={fmtShort(dashboard.totalSales)} sub={`${invoices.length} invoices`} />
-            <KpiCard label="Total Purchase" value={fmtShort(dashboard.totalPurchase)} sub="Imported and manual bills" />
-            <KpiCard label="Net Profit" value={fmtShort(dashboard.totalProfit)} sub="Sales minus purchase and expenses" trendUp={dashboard.totalProfit >= 0} />
-            <KpiCard label="Pending Payments" value={fmtShort(dashboard.pendingPayments)} sub={`${dashboard.stockAlerts?.length || 0} stock alerts`} />
-          </div>
+        <div className="kpi-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 22 }}>
+          <KpiCard label="Total Sales" value={fmtShort(dashboard.totalSales)} sub={`${invoices.length} invoices`} />
+          <KpiCard label="Total Purchase" value={fmtShort(dashboard.totalPurchase)} sub="Imported and manual bills" />
+          <KpiCard label="Net Profit" value={fmtShort(dashboard.totalProfit)} sub="Sales minus purchase and expenses" trendUp={dashboard.totalProfit >= 0} />
+          <KpiCard label="Pending Payments" value={fmtShort(dashboard.pendingPayments)} sub={`${dashboard.stockAlerts?.length || 0} stock alerts`} />
+        </div>
 
-          <div className="chart-target-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 16, marginBottom: 18 }}>
-            <Card>
-              <CardHead title="Revenue Overview" sub="Monthly trend for current and prior year." />
-              <CardBody>
-                <ResponsiveContainer width="100%" height={210}>
-              <AreaChart data={dashboard.monthlyRevenue || []} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
-                <defs>
-                  <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b5bdb" stopOpacity={0.22} />
-                    <stop offset="95%" stopColor="#3b5bdb" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#94d82d" stopOpacity={0.14} />
-                    <stop offset="95%" stopColor="#94d82d" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--ink-20)', fontFamily: 'var(--font)' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--ink-20)', fontFamily: 'var(--font)' }} axisLine={false} tickLine={false} tickFormatter={(value) => `Rs${(value / 1000).toFixed(0)}K`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="purchases" name="Purchases" stroke="#94d82d" strokeWidth={1.8} fill="url(#g2)" strokeDasharray="5 3" />
-                <Area type="monotone" dataKey="sales" name="Sales" stroke="#3b5bdb" strokeWidth={2.5} fill="url(#g1)" />
-              </AreaChart>
-            </ResponsiveContainer>
-              </CardBody>
-            </Card>
-
-            <Card>
-              <CardHead
-                title="Add Target"
-                sub={targetSummary.nearestDeadline ? `Next deadline ${targetSummary.nearestDeadline.deadline}` : 'Track priorities, deadlines and progress.'}
-                right={<Button size="sm" variant="primary" data-focus-item="true" data-target-action="create" onClick={() => setTargetEditor(createEmptyTarget())}>+ Add</Button>}
-              />
-              <CardBody style={{ display: 'grid', gap: 10 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <TargetMiniStat label="Open" value={targetSummary.openCount} />
-                  <TargetMiniStat label="Completed" value={targetSummary.completedCount} />
-                </div>
-
-                <div ref={targetFocus.ref} style={{ display: 'grid', gap: 8 }}>
-                  {targets.length > 0 ? targets.map((target) => {
-                    const progress = computeTargetProgress(target)
-                    return (
-                      <div
-                        key={target.id}
-                        data-focus-item="true"
-                        data-target-id={target.id}
-                        className="focusable-card"
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setTargetEditor(target)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault()
-                            setTargetEditor(target)
-                          }
-                        }}
-                        style={{
-                          border: '1px solid var(--border)',
-                          borderRadius: 'var(--r-md)',
-                          padding: '10px 11px',
-                          background: target.completed ? '#f6fbf7' : '#fff',
-                          display: 'grid',
-                          gap: 7,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: target.completed ? 'line-through' : 'none' }}>{target.title}</div>
-                            <div style={{ fontSize: 11.5, color: 'var(--ink-40)' }}>{target.deadline || 'No deadline'} | {target.priority}</div>
-                          </div>
-                          <StatusPill label={target.completed ? 'Done' : target.priority} tone={target.completed ? 'done' : target.priority.toLowerCase()} />
-                        </div>
-
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: 'var(--ink-40)', marginBottom: 4 }}>
-                            <span>{fmt(target.currentValue)} of {fmt(target.targetValue)}</span>
-                            <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{progress}%</span>
-                          </div>
-                          <div style={{ height: 6, borderRadius: 999, background: 'var(--surface-3)', overflow: 'hidden' }}>
-                            <div style={{ width: `${progress}%`, height: '100%', background: target.completed ? '#1a6b3c' : '#111827', borderRadius: 999, transition: 'width .16s ease' }} />
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                          <div style={{ fontSize: 11.5, color: 'var(--ink-40)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {target.notes || 'Enter opens target editor'}
-                          </div>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              tabIndex={-1}
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                toggleTargetCompleted(target.id)
-                              }}
-                            >
-                              {target.completed ? 'Reopen' : 'Done'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              tabIndex={-1}
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                setTargetEditor(target)
-                              }}
-                            >
-                              Edit
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  }) : (
-                    <div style={{ border: '1px dashed var(--border-2)', borderRadius: 'var(--r-md)', padding: '18px 14px', textAlign: 'center', color: 'var(--ink-40)', fontSize: 12 }}>
-                      Targets will appear here. Use <strong style={{ color: 'var(--ink)' }}>Add</strong> to create your first dashboard goal.
-                    </div>
-                  )}
-                </div>
-              </CardBody>
-            </Card>
-          </div>
+        <div className="chart-target-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 16, marginBottom: 18 }}>
+          <Card>
+            <CardHead title="Revenue Overview" sub="Monthly trend for current and prior year." />
+            <CardBody>
+              <ResponsiveContainer width="100%" height={210}>
+                <AreaChart data={dashboard.monthlyRevenue || []} margin={{ top: 5, right: 5, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b5bdb" stopOpacity={0.22} />
+                      <stop offset="95%" stopColor="#3b5bdb" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#94d82d" stopOpacity={0.14} />
+                      <stop offset="95%" stopColor="#94d82d" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--ink-20)', fontFamily: 'var(--font)' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: 'var(--ink-20)', fontFamily: 'var(--font)' }} axisLine={false} tickLine={false} tickFormatter={(value) => `Rs${(value / 1000).toFixed(0)}K`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="purchases" name="Purchases" stroke="#94d82d" strokeWidth={1.8} fill="url(#g2)" strokeDasharray="5 3" />
+                  <Area type="monotone" dataKey="sales" name="Sales" stroke="#3b5bdb" strokeWidth={2.5} fill="url(#g1)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardBody>
+          </Card>
 
           <Card>
-            <CardHead title="Recent Transactions" sub="Latest sales, purchases, and expenses." />
-            <Table
-              focusId="dashboard-recent-invoices"
-              cols={cols}
-          rows={recentTransactions}
-          onRowClick={(row) => {
-            if (row.type === 'Sale') setViewInvoice(row)
-            else if (row.type === 'Purchase') setViewPO(row)
-          }}
+            <CardHead
+              title="Add Target"
+              sub={targetSummary.nearestDeadline ? `Next deadline ${targetSummary.nearestDeadline.deadline}` : 'Track priorities, deadlines and progress.'}
+              right={<Button size="sm" variant="primary" data-focus-item="true" data-target-action="create" onClick={() => setTargetEditor(createEmptyTarget())}>+ Add</Button>}
             />
+            <CardBody style={{ display: 'grid', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <TargetMiniStat label="Open" value={targetSummary.openCount} />
+                <TargetMiniStat label="Completed" value={targetSummary.completedCount} />
+              </div>
+
+              <div ref={targetFocus.ref} style={{ display: 'grid', gap: 8 }}>
+                {targets.length > 0 ? targets.map((target) => {
+                  const progress = computeTargetProgress(target)
+                  return (
+                    <div
+                      key={target._id}
+                      data-focus-item="true"
+                      data-target-id={target._id}
+                      className="focusable-card"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setTargetEditor(target)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          setTargetEditor(target)
+                        }
+                      }}
+                      style={{
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--r-md)',
+                        padding: '10px 11px',
+                        background: target.completed === 'Completed' ? '#f6fbf7' : '#fff',
+                        display: 'grid',
+                        gap: 7,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink)', textDecoration: target.completed === 'Completed' ? 'line-through' : 'none' }}>{target.title}</div>
+                          <div style={{ fontSize: 11.5, color: 'var(--ink-40)' }}>{target.deadline || 'No deadline'} | {target.priority}</div>
+                        </div>
+                        <StatusPill label={target.completed === 'Completed' ? 'Done' : target.priority} tone={target.completed === 'Completed' ? 'done' : target.priority.toLowerCase()} />
+                      </div>
+
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 11.5, color: 'var(--ink-40)', marginBottom: 4 }}>
+                          <span>{fmt(target.currentValue)} of {fmt(target.targetValue)}</span>
+                          <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{progress}%</span>
+                        </div>
+                        <div style={{ height: 6, borderRadius: 999, background: 'var(--surface-3)', overflow: 'hidden' }}>
+                          <div style={{ width: `${progress}%`, height: '100%', background: target.completed === 'Completed' ? '#1a6b3c' : '#111827', borderRadius: 999, transition: 'width .16s ease' }} />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                        <div style={{ fontSize: 11.5, color: 'var(--ink-40)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {target.notes || 'Enter opens target editor'}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            tabIndex={-1}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              toggleTargetCompleted(target._id)
+                            }}
+                          >
+                            {target.completed === 'Completed' ? 'Reopen' : 'Done'}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            tabIndex={-1}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setTargetEditor(target)
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }) : (
+                  <div style={{ border: '1px dashed var(--border-2)', borderRadius: 'var(--r-md)', padding: '18px 14px', textAlign: 'center', color: 'var(--ink-40)', fontSize: 12 }}>
+                    Targets will appear here. Use <strong style={{ color: 'var(--ink)' }}>Add</strong> to create your first dashboard goal.
+                  </div>
+                )}
+              </div>
+            </CardBody>
           </Card>
-        </>
-      )}
+        </div>
+
+        <Card>
+          <CardHead title="Recent Transactions" sub="Latest sales, purchases, and expenses." />
+          <Table
+            focusId="dashboard-recent-invoices"
+            cols={cols}
+            rows={recentTransactions}
+            onRowClick={(row) => {
+              if (row.type === 'Sale') setViewInvoice(row)
+              else if (row.type === 'Purchase') setViewPO(row)
+            }}
+          />
+        </Card>
+      </>
 
       <TargetEditorModal
         value={targetEditor}
@@ -295,7 +430,7 @@ function TargetEditorModal({ value, onClose, onDelete, onSave }) {
     <Modal
       open={Boolean(value)}
       onClose={onClose}
-      title={value.id ? 'Edit Target' : 'Add Target'}
+      title={value._id ? 'Edit Target' : 'Add Target'}
       width={560}
     >
       <TargetEditorForm initialValue={value} onClose={onClose} onDelete={onDelete} onSave={onSave} />
@@ -315,54 +450,74 @@ function TargetEditorForm({ initialValue, onClose, onDelete, onSave }) {
     targetValue: Number(form.targetValue),
     currentValue: Number(form.currentValue),
   })
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const payload = {
+      ...form,
+      targetValue: Number(form.targetValue) || 0,
+      currentValue: Number(form.currentValue) || 0,
+    };
+
+    await onSave(payload);
+  };
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <Input label="Target Name" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Monthly sales collection" />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Input label="Target Value" type="number" value={form.targetValue} onChange={(event) => setForm((current) => ({ ...current, targetValue: event.target.value }))} />
-        <Input label="Current Progress" type="number" value={form.currentValue} onChange={(event) => setForm((current) => ({ ...current, currentValue: event.target.value }))} />
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Input label="Deadline" type="date" value={form.deadline} onChange={(event) => setForm((current) => ({ ...current, deadline: event.target.value }))} />
-        <Select label="Priority" value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))} options={TARGET_PRIORITY_OPTIONS} />
-      </div>
-      <Select label="Status" value={form.completed ? 'Completed' : 'Open'} onChange={(event) => setForm((current) => ({ ...current, completed: event.target.value === 'Completed' }))} options={['Open', 'Completed']} />
-      <Textarea label="Notes" rows={3} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Next follow-up or target details" />
+      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12 }}>
 
-      <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', padding: '10px 12px', display: 'grid', gap: 5 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
-          <span style={{ color: 'var(--ink-40)' }}>Progress</span>
-          <strong>{progress}%</strong>
+        <Input label="Target Name" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Monthly sales collection" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Input label="Target Value" type="number" value={form.targetValue} onChange={(event) => setForm((current) => ({ ...current, targetValue: event.target.value }))} />
+          <Input label="Current Progress" type="number" value={form.currentValue} onChange={(event) => setForm((current) => ({ ...current, currentValue: event.target.value }))} />
         </div>
-        <div style={{ height: 7, borderRadius: 999, background: '#e9e9e9', overflow: 'hidden' }}>
-          <div style={{ width: `${progress}%`, height: '100%', background: '#111827', borderRadius: 999 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Input label="Deadline" type="date" value={form.deadline} onChange={(event) => setForm((current) => ({ ...current, deadline: event.target.value }))} />
+          <Select label="Priority" value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))} options={TARGET_PRIORITY_OPTIONS} />
         </div>
-      </div>
+        <Select
+          label="Status"
+          value={form.completed}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              completed: event.target.value
+            }))
+          }
+          options={['Open', 'Completed']}
+        />
+        <Textarea label="Notes" rows={3} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Next follow-up or target details" />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-        <div>
-          {initialValue.id && (
-            <Button variant="danger" onClick={() => onDelete(initialValue.id)}>
-              Delete Target
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', padding: '10px 12px', display: 'grid', gap: 5 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
+            <span style={{ color: 'var(--ink-40)' }}>Progress</span>
+            <strong>{progress}%</strong>
+          </div>
+          <div style={{ height: 7, borderRadius: 999, background: '#e9e9e9', overflow: 'hidden' }}>
+            <div style={{ width: `${progress}%`, height: '100%', background: '#111827', borderRadius: 999 }} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            {initialValue._id && (
+              <Button variant="danger" onClick={() => onDelete(initialValue._id)}>
+                Delete Target
+              </Button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={!String(form.title || '').trim()}
+            >
+              Save Target
             </Button>
-          )}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button
-            variant="primary"
-            onClick={() => onSave({
-              ...form,
-              targetValue: Number(form.targetValue) || 0,
-              currentValue: Number(form.currentValue) || 0,
-            })}
-            disabled={!String(form.title || '').trim()}
-          >
-            Save Target
-          </Button>
-        </div>
-      </div>
+      </form>
     </div>
   )
 }
@@ -400,41 +555,31 @@ function computeTargetProgress(target) {
 
 function createEmptyTarget() {
   return {
-    id: '',
+    _id: '',
     title: '',
     targetValue: 0,
     currentValue: 0,
     deadline: todayISO(),
     priority: 'Medium',
-    completed: false,
+    completed: 'Open',
     notes: '',
   }
 }
 
-function normalizeTarget(target) {
+function normalizeTarget(target = {}) {
   return {
-    id: target.id || `target-${Date.now()}`,
+    _id: String(target._id ?? target.id ?? ''),
     title: String(target.title || '').trim(),
     targetValue: Number(target.targetValue) || 0,
     currentValue: Number(target.currentValue) || 0,
     deadline: target.deadline || todayISO(),
-    priority: TARGET_PRIORITY_OPTIONS.includes(target.priority) ? target.priority : 'Medium',
-    completed: Boolean(target.completed),
+    priority: TARGET_PRIORITY_OPTIONS.includes(target.priority)
+      ? target.priority
+      : 'Medium',
+    completed: COMPLETED_OPTIONS.includes(target.completed)
+      ? target.completed
+      : 'Open',
     notes: String(target.notes || '').trim(),
   }
 }
 
-function loadTargets() {
-  if (typeof window === 'undefined') return []
-
-  try {
-    const raw = window.localStorage.getItem(DASHBOARD_TARGETS_STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.map(normalizeTarget)
-  }
-  catch {
-    return []
-  }
-}
