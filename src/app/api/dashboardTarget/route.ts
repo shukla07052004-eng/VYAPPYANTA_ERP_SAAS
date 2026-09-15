@@ -127,28 +127,11 @@ export async function PATCH(req: NextRequest) {
 
     const data = await req.json();
 
-    const {
-      _id,
-      title,
-      targetValue,
-      currentValue,
-      deadline,
-      priority,
-      completed,
-      notes,
-    } = data;
+    const { _id, ...updates } = data;
 
     const updatedTarget = await Target.findByIdAndUpdate(
       _id,
-      {
-        title,
-        targetValue,
-        currentValue,
-        deadline,
-        priority,
-        completed,
-        notes,
-      },
+      updates,
       {
         new: true,
         runValidators: true,
@@ -167,17 +150,17 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Update submitted successfully",
+      message: "Target updated successfully",
       data: updatedTarget,
     });
 
   } catch (error) {
-    console.log("Failed to update target data", error);
+    console.error("Failed to update target:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to update target data",
+        message: "Failed to update target",
       },
       { status: 500 }
     );

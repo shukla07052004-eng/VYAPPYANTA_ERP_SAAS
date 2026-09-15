@@ -2,24 +2,24 @@ import mongoose, { Schema, Document } from "mongoose";
 import { Types } from "mongoose";
 
 export interface Sales extends Document {
-    invoiceIds: string[];
+    invoiceNumber: string[];
     Patry: Types.ObjectId;
     invDate: Date;
     dueDate: Date;
-    invType:Array<string>;
+    invType:string;
     itemName: Types.ObjectId;
     HSN:string;
     Quantity:number;
     Rate:number;
     Disc:number;
-    GST:Array<number>;
+    GST:number;
     amount:number;
-    paymentTerms:Array<string>;
+    paymentTerms:string;
 }
 
 const SalesSchema: Schema<Sales> = new Schema(
     {
-        invoiceIds:[
+        invoiceNumber:[
             {
                 type:String
             }
@@ -27,6 +27,7 @@ const SalesSchema: Schema<Sales> = new Schema(
         Patry:{
             type: Schema.Types.ObjectId,
             ref: "Party",
+            required:true   
         },
         invDate:{
             type:Date,
@@ -37,11 +38,13 @@ const SalesSchema: Schema<Sales> = new Schema(
             required:true
         },
         invType:{
+            type:String,
            enum:["Retail Invoice", "Tax Invoice", "PerformaInvoice"]
         },
         itemName:{
            type: Schema.Types.ObjectId,
-           ref:"Item"
+           ref:"Item",
+           required:true,
         },
         HSN:{
             type:String,
@@ -59,6 +62,7 @@ const SalesSchema: Schema<Sales> = new Schema(
             type:Number,
         },
         GST:{
+            type:Number,
             enums:[0, 5, 12, 18, 28],
             required: true
         },
@@ -67,6 +71,7 @@ const SalesSchema: Schema<Sales> = new Schema(
             required:true
         },
         paymentTerms:{
+            type:String,
             enum:["CREDIT", "CASH", "BANK", "UPI", "AGAINST GNR"]
         }
 

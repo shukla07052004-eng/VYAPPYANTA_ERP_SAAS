@@ -23,7 +23,7 @@ import { useRouter } from 'next/navigation'
 
 const FILTERS = ['All', 'Paid', 'Partial', 'Pending']
 
-export default function SalesPage({ onNewInvoice }) {
+export default function SalesPage() {
   const router = useRouter()
   const { invoices, recordPayment } = useApp()
   const toast = useToast()
