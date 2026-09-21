@@ -20,6 +20,7 @@ const ENTER_FLOW_FIELDS = ['desc', 'qty', 'rate', 'discountPct', 'taxPct']
 const MIN_VISIBLE_ROWS = 12
 
 const emptyItem = () => ({
+  itemId: '',
   desc: '',
   hsn: '',
   qty: '1',
@@ -30,7 +31,7 @@ const emptyItem = () => ({
 
 export default function NewInvoicePage() {
   const router = useRouter()
-  const { addInvoice, invoices, itemMaster, parties, purchases, touchRecentItem } = useApp()
+  const {invoices, itemMaster, parties, purchases, touchRecentItem} = useApp()
   const toast = useToast()
   const [form, setForm] = useState(() => initialForm())
   const [items, setItems] = useState([emptyItem()])
@@ -47,7 +48,7 @@ export default function NewInvoicePage() {
   const { isOpen, setOpen, suggestions, highlightedIndex, setHighlightedIndex } = useAutocomplete({
     items: customerParties,
     value: form.party,
-    getLabel: (party) => party.name,
+    getLabel: (party) => party.name || party.companyName || ''
   })
 
   const computedItems = items.map((item) => {
@@ -167,15 +168,35 @@ export default function NewInvoicePage() {
 
   const applyParty = (party) => {
     if (!party || typeof party !== 'object') return
-    const billing = party.billingAddress || {}
+    const address = party.address || {}
     setForm((current) => ({
       ...current,
-      party: party.name || party.companyName || '',
-      phone: party.phone || '',
-      city: party.city || billing.city || '',
-      gstin: party.gstin || party.taxId || '',
-      contactPerson: party.contactPerson || party.primaryContactName || '',
-      billingAddress: billing.addressLine1 || party.billingAddressLine1 || current.billingAddress,
+      // MongoDB Party ID
+      partyId: party._id || party.id || '',
+      // Party snapshot
+      party:
+        party.name ||
+        party.companyName ||
+        '',
+      phone:
+        party.phone ||
+        '',
+      city:
+        address.city ||
+        party.city ||
+        '',
+      gstin:
+        party.gstin ||
+        party.taxId ||
+        party.taxID ||
+        '',
+      contactPerson:
+        party.contactPerson ||
+        party.primaryContactName ||
+        '',
+      billingAddress:
+        address.addressLine1 ||
+        current.billingAddress,
     }))
     setOpen(false)
   }
@@ -210,30 +231,30 @@ export default function NewInvoicePage() {
 
   const handleItemPreview = useCallback((item, { rowIndex } = {}) => {
     setActivePreview(prev => {
-        const previousId =
-            prev?.record?.id ??
-            null
+      const previousId =
+        prev?.record?.id ??
+        null
 
-        const currentId =
-            item?.id ??
+      const currentId =
+        item?.id ??
 
-            null
+        null
 
-        const currentRowIndex = rowIndex ?? null
+      const currentRowIndex = rowIndex ?? null
 
-        if (
-            prev?.type === 'item' &&
-            previousId === currentId &&
-            prev?.rowIndex === currentRowIndex
-        ) {
-            return prev
-        }
+      if (
+        prev?.type === 'item' &&
+        previousId === currentId &&
+        prev?.rowIndex === currentRowIndex
+      ) {
+        return prev
+      }
 
-        return {
-            type: 'item',
-            record: item ?? null,
-            rowIndex: currentRowIndex
-        }
+      return {
+        type: 'item',
+        record: item ?? null,
+        rowIndex: currentRowIndex
+      }
     })
   }, [])
 
@@ -270,17 +291,26 @@ export default function NewInvoicePage() {
   }
 
   const applyItemMaster = useCallback((rowIndex, item) => {
-    setItems((current) => current.map((row, index) => (
-      index === rowIndex
-        ? {
-          ...row,
-          desc: item.name,
-          hsn: item.hsn || row.hsn,
-          rate: item.lastRate ? String(item.lastRate) : row.rate,
-          taxPct: item.gstSlab ?? row.taxPct,
-        }
-        : row
-    )))
+    setItems((current) =>
+      current.map((row, index) =>
+        index === rowIndex
+          ? {
+            ...row,
+
+            // MongoDB Item ID
+            itemId: item._id || item.id || '',
+
+            // Snapshot information
+            desc: item.name,
+            hsn: item.hsn || row.hsn,
+            rate: item.lastRate
+              ? String(item.lastRate)
+              : row.rate,
+            taxPct: item.gstSlab ?? row.taxPct,
+          }
+          : row
+      )
+    )
   }, [])
 
   const appendRow = useCallback(() => {
@@ -345,43 +375,123 @@ export default function NewInvoicePage() {
   }, [advanceFromTaxField])
 
 
-  const saveInvoice = useCallback(() => {
+  const saveInvoice = useCallback(async (row) => {
     const nextErrors = {}
-    if (!form.party.trim()) nextErrors.party = 'Customer or party name is required'
-    if (!computedItems.some((item) => item.desc.trim())) nextErrors.items = 'Add at least one invoice item'
+
+    if (!form.party.trim()) {
+      nextErrors.party = 'Customer or party name is required'
+    }
+
+    if (!computedItems.some((item) => item.desc.trim())) {
+      nextErrors.items = 'Add at least one invoice item'
+    }
+
     setErrors(nextErrors)
+
     if (Object.keys(nextErrors).length) return false
 
-    const invoice = addInvoice({
-      ...form,
-      transport,
-      items: computedItems
-        .filter((item) => item.desc.trim())
-        .map((item) => ({
-          desc: item.desc,
-          hsn: item.hsn,
-          qty: item.qty,
-          rate: item.rate,
-          discountPct: item.discountPct,
-          taxPct: item.taxPct,
-          taxLabel: `GST ${item.taxPct}%`,
-          baseAmount: item.baseAmount,
-          taxAmount: item.taxAmount,
-          amount: item.lineTotal,
-        })),
-      subtotal,
-      tax,
-      taxBreakdown,
-      total,
-    })
+    try {
+        const payload = {
+        invoiceType: form.invoiceType,
 
-    toast(`Invoice ${invoice.id} created for ${invoice.party}`, 'success')
-    router.push('/sales')
-    return true
-  }, [addInvoice, computedItems, form, subtotal, tax, taxBreakdown, toast, total, transport])
+        partyId: form.partyId,
+
+        partySnapshot: {
+          name: form.party,
+          gstin: form.gstin,
+          phone: form.phone,
+          contactPerson: form.contactPerson,
+          billingAddress: form.billingAddress,
+          city: form.city,
+        },
+
+        date: form.date,
+        dueDate: form.dueDate,
+
+        items: computedItems
+          .filter((item) => item.desc.trim())
+          .map((item) => ({
+            itemId: item.itemId || '',
+            desc: item.desc,
+            hsn: item.hsn,
+            qty: Number(item.qty),
+            rate: Number(item.rate),
+            discountPct: Number(item.discountPct),
+            taxPct: Number(item.taxPct),
+            baseAmount: Number(item.baseAmount),
+            taxAmount: Number(item.taxAmount),
+            amount: Number(item.lineTotal),
+          })),
+
+        subtotal: Number(subtotal),
+        tax: Number(tax),
+        total: Number(total),
+
+        transport,
+        notes: form.notes,
+      }
+
+      console.log("SENDING INVOICE:", payload)
+
+      const response = await fetch("/api/newInvoice", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await response.json()
+
+      console.log("Invoice API status:", response.status)
+      console.log("Invoice API response:", result)
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to create invoice"
+        )
+      }
+
+      const invoice = result.data
+
+      toast(
+        `Invoice ${invoice.invoiceNumber || invoice._id} created for ${invoice.partySnapshot.name}`,
+        "success"
+      )
+
+      router.push("/sales");
+
+      return true
+
+    } catch (error) {
+      console.error("Invoice creation failed:", error)
+
+      toast(
+        error.message || "Failed to create invoice",
+        "error"
+      )
+
+      return false
+    }
+  }, [
+    computedItems,
+    form,
+    subtotal,
+    tax,
+    total,
+    transport,
+    toast,
+    router,
+  ])
 
   useKeyboard({
-    bindings: [{ id: 'saveRecord', allowInEditable: true, handler: saveInvoice }],
+    bindings: [
+      {
+        id: 'saveRecord',
+        allowInEditable: true,
+        handler: saveInvoice,
+      },
+    ],
   })
 
   useEffect(() => {
@@ -593,7 +703,7 @@ export default function NewInvoicePage() {
         <section className="erp-workspace-band erp-workspace-band--header">
           <div className="erp-header-strip">
             <div className="erp-header-party">
-              <div style={{ position: 'relative'  }}>
+              <div style={{ position: 'relative' }}>
                 <Input
                   ref={setHeaderRef(0)}
                   data-page-focus="invoice-party"
@@ -617,7 +727,7 @@ export default function NewInvoicePage() {
                   <div className="erp-dropdown">
                     {suggestions.map((party, index) => (
                       <button
-                        key={party.id}
+                        key={party._id}
                         ref={(node) => {
                           partyOptionRefs.current[index] = node
                         }}
@@ -683,7 +793,7 @@ export default function NewInvoicePage() {
 
         <section className="erp-workspace-band erp-workspace-band--grid">
           <div className="erp-grid-shell">
-            <div className="erp-grid-header" style={{ gridTemplateColumns: GRID_COLUMNS, position:'relative' }}>
+            <div className="erp-grid-header" style={{ gridTemplateColumns: GRID_COLUMNS, position: 'relative' }}>
               {['Sr', 'Item Name', 'HSN', 'Qty', 'Rate', 'Disc %', 'GST %', 'Amount'].map((label) => (
                 <div key={label} className="erp-grid-headcell">{label}</div>
               ))}
@@ -752,7 +862,7 @@ export default function NewInvoicePage() {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].qty = node
                             }}
-                          
+
                             min="0"
                             value={currentRow.qty}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -770,7 +880,7 @@ export default function NewInvoicePage() {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].rate = node
                             }}
-                            
+
                             min="0"
                             value={currentRow.rate}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -788,7 +898,7 @@ export default function NewInvoicePage() {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].discountPct = node
                             }}
-              
+
                             min="0"
                             value={currentRow.discountPct}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -1056,8 +1166,8 @@ const ItemInfoPanel = React.memo(function ItemInfoPanel({ info }) {
               </tr>
             </thead>
             <tbody>
-              {info.lastSales.map((sale) => (
-               <tr key={sale.id}>
+              {info.lastSales.map((sale, index) => (
+                <tr key={sale._id || `${sale.invoiceNo}-${sale.date}-${index}`}>
                   <td>{sale.date}</td>
                   <td>{sale.invoiceNo}</td>
                   <td>{sale.customer}</td>
@@ -1107,16 +1217,22 @@ function SectionTitle({ icon, title }) {
 
 function initialForm() {
   const date = todayISO()
+
   return {
     invoiceType: 'Tax Invoice',
+
+    partyId: '',
     party: '',
+
     contactPerson: '',
     phone: '',
     city: '',
     gstin: '',
     billingAddress: '',
+
     date,
     dueDate: addDays(date, 30),
+
     notes: '',
   }
 }
@@ -1124,48 +1240,152 @@ function initialForm() {
 function buildPartyInsight(party, invoices = [], purchases = []) {
   if (!party) return null
   const name = party.name || party.companyName || ''
-  const sales = invoices.filter((invoice) => sameName(invoice.party, name))
-  const purchaseRows = purchases.filter((purchase) => sameName(purchase.supplier, name))
-  const totalSalesRaw = sumBy(sales, (invoice) => invoice.total)
-  const totalPurchasesRaw = sumBy(purchaseRows, (purchase) => purchase.amount ?? purchase.total)
-  const outstandingRaw = sales.reduce((sum, invoice) => (
-    sum + Math.max((Number(invoice.total) || 0) - (Number(invoice.paid) || 0), 0)
-  ), 0)
-  const openingRaw = Number(party.openingBalance ?? party.balance) || 0
-  const currentRaw = Number(party.currentBalance ?? party.balance) || outstandingRaw || 0
-  const creditLimitRaw = Number(party.creditLimit) || 0
+  const sales = invoices.filter((invoice) =>
+    sameName(invoice.party, name)
+  )
+  const purchaseRows = purchases.filter((purchase) =>
+    sameName(purchase.supplier, name)
+  )
+  const totalSalesRaw = sumBy(
+    sales,
+    (invoice) => invoice.total
+  )
+  const totalPurchasesRaw = sumBy(
+    purchaseRows,
+    (purchase) => purchase.amount ?? purchase.total
+  )
+  const outstandingRaw = sales.reduce(
+    (sum, invoice) =>
+      sum +
+      Math.max(
+        (Number(invoice.total) || 0) -
+        (Number(invoice.paid) || 0),
+        0
+      ),
+    0
+  )
+  const openingRaw =
+    Number(party.openingBalance ?? party.balance) || 0
+  const currentRaw =
+    Number(party.currentBalance ?? party.balance) ||
+    outstandingRaw ||
+    0
+  const creditLimitRaw =
+    Number(party.creditLimit) || 0
   const lastInvoice = sortByDateDesc(sales)[0]
-  const lastPayment = sortByDateDesc(sales.filter((invoice) => Number(invoice.paid) > 0))[0]
-  const billing = party.billingAddress || {}
-  const address = party.address || billing.addressLine1 || party.billingAddressLine1 || billing.line1 || ''
-  const state = party.state || billing.state || party.billingState || ''
-  const pincode = party.pincode || billing.pincode || party.billingPincode || ''
-  const city = party.city || billing.city || ''
-  const status = party.status || (String(party.deleted).toLowerCase() === 'true' ? 'Inactive' : 'Active')
-
+  const lastPayment = sortByDateDesc(
+    sales.filter(
+      (invoice) => Number(invoice.paid) > 0
+    )
+  )[0]
+  // ------------------------------------
+  // NEW PARTY ADDRESS STRUCTURE
+  // ------------------------------------
+  const address = party.address || {}
+  const addressLine1 =
+    address.addressLine1 ||
+    party.billingAddressLine1 ||
+    ''
+  const city =
+    address.city ||
+    party.city ||
+    ''
+  const state =
+    address.state ||
+    party.state ||
+    ''
+  const pincode =
+    address.postalCode ||
+    party.pincode ||
+    ''
+  const country =
+    address.country ||
+    ''
+  // ------------------------------------
+  // STATUS
+  // ------------------------------------
+  const status =
+    party.status ||
+    (
+      String(party.deleted).toLowerCase() === 'true'
+        ? 'Inactive'
+        : 'Active'
+    )
   return {
     name,
-    ledgerType: party.type === 'Both' ? 'Customer / Supplier' : party.type || 'Customer',
-    gstin: party.gstin || party.taxId || '',
-    mobile: party.mobile || party.phone || '',
-    email: party.email || '',
-    contactPerson: party.contactPerson || party.primaryContactName || '',
-    address,
+    ledgerType:
+      party.type === 'Both'
+        ? 'Customer / Supplier'
+        : party.type || 'Customer',
+    gstin:
+      party.gstin ||
+      party.taxId ||
+      party.taxID ||
+      '',
+    mobile:
+      party.mobile ||
+      party.phone ||
+      '',
+    email:
+      party.email ||
+      '',
+    contactPerson:
+      party.contactPerson ||
+      party.primaryContactName ||
+      '',
+    // ------------------------------------
+    // ADDRESS DISPLAY VALUES
+    // ------------------------------------
+    address: addressLine1,
     city,
     state,
     pincode,
-    openingBalance: formatSignedAmount(openingRaw, party.drCr),
-    currentBalance: formatSignedAmount(currentRaw, party.drCr),
-    creditLimit: creditLimitRaw ? fmt(creditLimitRaw) : '-',
-    outstandingAmount: fmt(outstandingRaw),
+    country,
+    // ------------------------------------
+    // FINANCIAL INFORMATION
+    // ------------------------------------
+    openingBalance:
+      formatSignedAmount(
+        openingRaw,
+        party.drCr
+      ),
+    currentBalance:
+      formatSignedAmount(
+        currentRaw,
+        party.drCr
+      ),
+    creditLimit:
+      creditLimitRaw
+        ? fmt(creditLimitRaw)
+        : '-',
+    outstandingAmount:
+      fmt(outstandingRaw),
     outstandingRaw,
-    lastPaymentDate: displayDate(lastPayment?.paymentDate || lastPayment?.date),
-    totalPurchases: fmt(totalPurchasesRaw),
-    totalSales: fmt(totalSalesRaw),
-    lastInvoiceDate: displayDate(lastInvoice?.date),
-    lastInvoiceAmount: lastInvoice ? fmt(lastInvoice.total) : '-',
+    lastPaymentDate:
+      displayDate(
+        lastPayment?.paymentDate ||
+        lastPayment?.date
+      ),
+    // ------------------------------------
+    // BUSINESS INFORMATION
+    // ------------------------------------
+    totalPurchases:
+      fmt(totalPurchasesRaw),
+    totalSales:
+      fmt(totalSalesRaw),
+    lastInvoiceDate:
+      displayDate(lastInvoice?.date),
+    lastInvoiceAmount:
+      lastInvoice
+        ? fmt(lastInvoice.total)
+        : '-',
     status,
-    creditBlocked: Boolean(party.creditBlocked) || (creditLimitRaw > 0 && outstandingRaw > creditLimitRaw),
+    creditBlocked:
+      Boolean(party.creditBlocked) ||
+      (
+        creditLimitRaw > 0 &&
+        outstandingRaw > creditLimitRaw
+      ),
   }
 }
 
@@ -1304,3 +1524,4 @@ const ERP_PRIMARY_BUTTON = {
   ...ERP_ACTION_BUTTON,
   background: '#111',
 }
+

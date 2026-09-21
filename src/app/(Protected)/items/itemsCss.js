@@ -160,27 +160,6 @@ const gstValueStyle = {
   transition: 'transform .18s ease',
 }
 
-function expiryBadgeStyle(variant) {
-  const palette = variant === 'danger'
-    ? { color: '#b91c1c', bg: '#fff1f2', border: '#fecdd3' }
-    : variant === 'warning'
-      ? { color: '#9a5b00', bg: '#fff7e6', border: '#f7d58b' }
-      : { color: '#166534', bg: '#effcf3', border: '#bbf7d0' }
-
-  return {
-    display: 'inline-flex',
-    alignItems: 'center',
-    width: 'fit-content',
-    borderRadius: 999,
-    padding: '3px 8px',
-    fontSize: 11,
-    fontWeight: 700,
-    border: `1px solid ${palette.border}`,
-    background: palette.bg,
-    color: palette.color,
-  }
-}
-
 const miniCardButtonStyle = {
   width: '100%',
   border: '1px solid var(--border)',
@@ -210,7 +189,28 @@ const dropzoneStyle = {
 }
 
 
-export {
+function expiryBadgeStyle(variant) {
+  const palette = variant === 'danger'
+  ? { color: '#b91c1c', bg: '#fff1f2', border: '#fecdd3' }
+  : variant === 'warning'
+  ? { color: '#9a5b00', bg: '#fff7e6', border: '#f7d58b' }
+  : { color: '#166534', bg: '#effcf3', border: '#bbf7d0' }
+  
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    width: 'fit-content',
+    borderRadius: 999,
+    padding: '3px 8px',
+    fontSize: 11,
+    fontWeight: 700,
+    border: `1px solid ${palette.border}`,
+    background: palette.bg,
+    color: palette.color,
+  }
+}
+
+export  {
     dropzoneStyle, 
     tabStyle, 
     miniCardButtonStyle, 

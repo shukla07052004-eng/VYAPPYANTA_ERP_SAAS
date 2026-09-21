@@ -2,179 +2,221 @@ import mongoose, { Schema, Document } from "mongoose";
 import { Types } from "mongoose";
 
 interface IAddress {
-    house: string;
-    street: string;
+    addressLine1: string;
     city: string;
     state: string;
-    pincode: string;
+    postalCode: string;
     country: string;
 }
 interface IBank {
     bankName: string;
-    IFSC: string;
-    accountNumber: string;
+    ifsc: string;
+    accountNo: string;
 }
 interface IRemarks {
-    internalRemaks: string;
+    notes: string;
     openingBalance: number;
-    currierNote: string;
-    supplierNote: string;
+    carrierInfo: string;
+    supplierDetails: string;
+}
+interface ILocation {
+    latitude: number,
+    longitude: number
 }
 export interface Party extends Document {
-    partyType: Array<string>;
-    accountGroup: Array<string>;
-    partyName: string;
-    partyCode: number;
-    GSTIN: string;
-    Contact: number;
-    Email: string;
+    partyType: string;
+    accountGroup: string;
+    companyName: string;
+    partyCode: string;
+    taxID: string;
+    primaryContactName: string;
+    primaryContactRole: string;
+    phone: string;
+    email: string;
     address: IAddress;
-    paymentTerm: Array<string>;
+    paymentTerm: string;
     creditLimit: number;
-    billingCurrency: Array<string>;
-    discount: number;
+    currency: string;
+    discountStructure: string;
     bank: IBank;
-    partnerRole: Array<string>;
-    shippingMethod: Array<string>;
-    recordStatus: Array<string>;
+    partnerRoles: Array<string>;
+    shippingMethods: Array<string>;
+    status: string;
     remarks: IRemarks;
+    location: ILocation;
 
 }
 
-const PartySchema: Schema<Party> = new Schema(
-    {
-        partyType: {
-            type: [String],
-            required: true,
-            enum: ["Customer", "Supplier", "Distributer", "Carrier", "Agent"]
-        },
-        accountGroup: {
-            type: [String],
-            enum: ["Sundry Debtor", "Sundry Creditor", "Distributors", "Transporters", "Commission Agent"],
-            required: true,
-        },
-        partyName: {
-            type: String,
-            required: true
-        },
-        partyCode: {
-            type: Number,
-            required: true
-        },
-        GSTIN: {
-            type: String,
-            required: true,
-            trim: true,
-            lowercase: true
-        },
-        Contact: {
-            type: Number,
-            required: true
-        },
-        Email: {
-            type: String,
-            required: true,
-            trim: true,
-            lowercase: true
-        },
-        address: {
-
-            house: {
-                type: String,
-
-            },
-            street: {
-                type: String,
-
-            },
-            city: {
-                type: String,
-                required: true
-
-            },
-            state: {
-                type: String,
-                required: true
-
-            },
-            pincode: {
-                type: String,
-                required: true
-
-            },
-            country: {
-                type: String,
-                required: true
-
-            },
-
-        },
-        paymentTerm: {
-            type:[String],
-            enum: ["Net7", "Net15", "Net30", "Net45", "COD", "Advance"]
-        },
-        creditLimit: {
-            type: Number,
-            trim: true
-        },
-        billingCurrency: {
-            type: [String],
-            enum: ["INR", "USD", "EUR", "AED"],
-            required: true
-        },
-        discount: {
-            type: Number
-        },
-        bank: {
-            bankName: {
-                type: String,
-                // required: true
-            },
-            IFSC: {
-                type: String,
-                // required: true
-            },
-            accountNumber: {
-                type: String,
-                // required: true
-            },
-        },
-        partnerRole: {
-            type:[String],
-            enum: ["Sold-TO", "Ship-TO", "Bill-TO"]
-        },
-        shippingMethod: {
-            type:[String],
-            enum: ["Road", "Air", "Rail", "Courier", "Local-Delivery", "Pick-Up"]
-        },
-        recordStatus: {
-            type:[String],
-            enum: ['Active', 'Blocked', 'Archived']
-        },
-        remarks: {
-            internalRemaks: {
-                type: String,
-                // required: true
-            },
-            openingBalance: {
-                type: Number,
-                // required: true
-            },
-            currierNote: {
-                type: String,
-                // required: true
-            },
-            supplierNote: {
-                type: String,
-                // required: true
-            },
-        }
+const PartySchema = new Schema(
+  {
+    partyType: {
+      type: String,
+      required: true,
+      enum: [
+        "Customer",
+        "Supplier",
+        "Distributor",
+        "Carrier",
+        "Agent"
+      ]
     },
-    {
-        timestamps: true
-    }
-);
 
+    accountGroup: {
+      type: String,
+      required: true,
+      enum: [
+        "Sundry Debtors",
+        "Sundry Creditors",
+        "Distributors",
+        "Transporters",
+        "Commission Agents"
+      ]
+    },
+
+    companyName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    partyCode: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true
+    },
+
+    taxID: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true
+    },
+
+    primaryContactName: {
+      type: String,
+      required: true
+    },
+
+    primaryContactRole: {
+      type: String,
+      required: true
+    },
+
+    phone: {
+      type: String,
+      required: true
+    },
+
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true
+    },
+
+    address: {
+      addressLine1: {
+        type: String,
+        required: true
+      },
+      city: {
+        type: String,
+        required: true
+      },
+      state: {
+        type: String,
+        required: true
+      },
+      postalCode: {
+        type: String,
+        required: true
+      },
+      country: {
+        type: String,
+        required: true
+      }
+    },
+
+    paymentTerm: {
+      type: String,
+      enum: [
+        "Net 7",
+        "Net 15",
+        "Net 30",
+        "Net 45",
+        "COD",
+        "Advance"
+      ]
+    },
+
+    creditLimit: {
+      type: Number
+    },
+
+    currency: {
+      type: String,
+      required: true,
+      enum: ["INR", "USD", "EUR", "AED"]
+    },
+
+    discountStructure: {
+      type: String
+    },
+
+    bank: {
+      bankName: String,
+      ifsc: String,
+      accountNo: String
+    },
+
+    partnerRoles: {
+      type: [String],
+      enum: [
+        "Sold-To",
+        "Ship-To",
+        "Bill-To",
+        "Payer"
+      ]
+    },
+
+    shippingMethods: {
+      type: [String],
+      enum: [
+        "Road",
+        "Air",
+        "Rail",
+        "Courier",
+        "Local Delivery",
+        "Pickup"
+      ]
+    },
+
+    status: {
+      type: String,
+      enum: [
+        "Active",
+        "Blocked",
+        "Archived"
+      ]
+    },
+
+    remarks: {
+      notes: String,
+      openingBalance: Number,
+      carrierInfo: String,
+      supplierDetails: String
+    },
+
+    location: {
+      latitude: Number,
+      longitude: Number
+    }
+  },
+  {
+    timestamps: true
+  }
+)
 
 export const Party =
     mongoose.models.Party || mongoose.model<Party>("Party", PartySchema);

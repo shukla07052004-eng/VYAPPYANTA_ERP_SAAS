@@ -4,7 +4,12 @@ import { createInvoiceRecord } from '../data/salesData.js'
 import { createPartyRecord } from '../data/partyData.js'
 import { createPurchaseRecord } from '../data/purchaseData.js'
 import { createExpenseRecord } from '../data/expenseData.js'
-import { loadErpState, saveErpState, getDefaultErpState } from '../data/store.js'
+import {
+  loadErpState,
+  saveErpState,
+  getDefaultErpState,
+  INIT_INVOICES,
+} from '../data/store.js'
 import {
   buildNormalizedErpData,
   importErpData,
@@ -22,88 +27,171 @@ import {
   SAMPLE_LOANS,
   SHARED_COMPANIES,
 } from '../data/erpModules.js'
-import { genInvoiceId } from '../utils/helpers.js'
 
 const AppContext = createContext(null)
+export function normalizeItem(item = {}) {
+  return {
+    id: String(item._id ?? item.id ?? ''),
+    name: item.name ?? item.itemName ?? item.desc ?? '',
+    category: item.category ?? 'Other Goods',
+    batchNo: item.batchNo ?? '',
+    mfgDate: item.mfgDate ?? '',
+    expiryDate: item.expiryDate ?? '',
+    expiryAlert: item.expiryAlert ?? true,
+    gstSlab: Number(item.gstSlab ?? item.gst ?? 18),
+    gst: Number(item.gst ?? item.gstSlab ?? 18),
+    purchasePrice: Number(item.purchasePrice ?? item.rate ?? 0),
+    salesPrice: Number(item.salesPrice ?? item.rate ?? 0),
+    mrp: Number(item.mrp ?? item.rate ?? 0),
+    stockQty: Number(item.stockQty ?? item.stock ?? 0),
+    discount: Number(item.discount ?? item.discountPct ?? 0),
+    unitType: item.unitType ?? 'Nos',
+    barcode: item.barcode ?? '',
+    hsn: item.hsn ?? '',
+    notesTag: item.notesTag ?? '',
+    notes: item.notes ?? '',
+    status: item.status ?? 'Active',
+    recentScore: Number(item.recentScore ?? 0),
+    recentUsedOn: item.recentUsedOn ?? '',
+    recentEditedOn: item.recentEditedOn ?? '',
+    deleted: Boolean(item.deleted ?? false),
+    version: Number(item.version ?? 1),
+  }
+}
 
-function buildInitialItemMaster({ sales, purchases }) {
+function buildInitialItemMaster({ sales = [], purchases = [] }) {
   const stockLedger = deriveStockLedger(sales, purchases)
   const byName = new Map()
 
   stockLedger.forEach((row, index) => {
-    byName.set(row.item.toLowerCase(), {
-      id: row.sku || `itm-${index + 1}`,
+    const key = String(row.item || '').trim().toLowerCase()
+
+    if (!key) return
+
+    byName.set(key, normalizeItem({
+      id: row.sku || `legacy-${index + 1}`,
+
       name: row.item,
+
       category: guessCategory(row.item),
-      batchNo: '',
-      mfgDate: '',
-      expiryDate: '',
-      expiryAlert: true,
+
       gstSlab: row.gstSlab ?? 18,
+
       gst: row.gstSlab ?? 18,
+
       purchasePrice: row.valuationRate || 0,
+
       salesPrice: row.valuationRate || 0,
+
       mrp: row.valuationRate || 0,
+
       stockQty: row.closingQty,
-      discount: 0,
-      unitType: 'Nos',
-      barcode: '',
+
       hsn: row.hsn || '',
-      notes: '',
-      status: row.closingQty > 0 ? 'Active' : 'Inactive',
-      recentScore: 0,
-      recentUsedOn: '',
-      recentEditedOn: '',
-      deleted: false,
-      version: 1,
-    })
+
+      status: row.closingQty > 0
+        ? 'Active'
+        : 'Inactive',
+    }))
   })
 
   const ingestEntries = (entries = [], type) => {
     entries.forEach((entry) => {
       entry.items?.forEach((item) => {
-        const key = String(item.desc || '').trim().toLowerCase()
+
+        const key = String(item.desc || '')
+          .trim()
+          .toLowerCase()
+
         if (!key) return
-        const current = byName.get(key) ?? {
-          id: `itm-${byName.size + 1}`,
-          name: item.desc,
-          category: 'Other Goods',
-          batchNo: '',
-          mfgDate: '',
-          expiryDate: '',
-          expiryAlert: true,
-          gstSlab: Number(item.taxPct) || 18,
-          gst: Number(item.taxPct) || 18,
-          purchasePrice: Number(item.rate) || 0,
-          salesPrice: Number(item.rate) || 0,
-          mrp: Number(item.rate) || 0,
-          stockQty: 0,
-          discount: Number(item.discountPct) || 0,
-          unitType: 'Nos',
-          barcode: '',
-          hsn: item.hsn || '',
-          notesTag: '',
-          notes: '',
-          status: 'Active',
-          recentScore: 0,
-          recentUsedOn: '',
-          recentEditedOn: '',
-          deleted: false,
-          version: 1,
+
+        const current = byName.get(key)
+
+        if (!current) {
+          byName.set(
+            key,
+            normalizeItem({
+              id: item.itemId || `legacy-${byName.size + 1}`,
+
+              name: item.desc,
+
+              category: 'Other Goods',
+
+              gstSlab: Number(item.taxPct) || 18,
+
+              gst: Number(item.taxPct) || 18,
+
+              purchasePrice:
+                type === 'purchase'
+                  ? Number(item.rate) || 0
+                  : 0,
+
+              salesPrice:
+                type === 'sales'
+                  ? Number(item.rate) || 0
+                  : 0,
+
+              mrp: Number(item.rate) || 0,
+
+              stockQty: 0,
+
+              discount: Number(item.discountPct) || 0,
+
+              hsn: item.hsn || '',
+
+              recentScore: 1,
+
+              recentUsedOn: entry.date || '',
+            })
+          )
+
+          return
         }
 
-        byName.set(key, {
+        byName.set(key, normalizeItem({
           ...current,
+
+          id: current.id,
+
           hsn: current.hsn || item.hsn || '',
-          gstSlab: Number(item.taxPct) || current.gstSlab || 18,
-          gst: Number(item.taxPct) || current.gst || current.gstSlab || 18,
-          purchasePrice: type === 'purchase' ? (Number(item.rate) || current.purchasePrice) : current.purchasePrice,
-          salesPrice: type === 'sales' ? (Number(item.rate) || current.salesPrice) : current.salesPrice,
-          mrp: current.mrp || Number(item.rate) || 0,
-          discount: current.discount || Number(item.discountPct) || 0,
-          recentScore: current.recentScore + 1,
-          recentUsedOn: entry.date || current.recentUsedOn,
-        })
+
+          gstSlab:
+            Number(item.taxPct) ||
+            current.gstSlab ||
+            18,
+
+          gst:
+            Number(item.taxPct) ||
+            current.gst ||
+            18,
+
+          purchasePrice:
+            type === 'purchase'
+              ? Number(item.rate) || current.purchasePrice
+              : current.purchasePrice,
+
+          salesPrice:
+            type === 'sales'
+              ? Number(item.rate) || current.salesPrice
+              : current.salesPrice,
+
+          mrp:
+            current.mrp ||
+            Number(item.rate) ||
+            0,
+
+          discount:
+            current.discount ||
+            Number(item.discountPct) ||
+            0,
+
+          recentScore:
+            Number(current.recentScore || 0) + 1,
+
+          recentUsedOn:
+            entry.date ||
+            current.recentUsedOn,
+        }))
       })
     })
   }
@@ -111,17 +199,71 @@ function buildInitialItemMaster({ sales, purchases }) {
   ingestEntries(sales, 'sales')
   ingestEntries(purchases, 'purchase')
 
-  return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name))
+  return Array.from(byName.values())
+    .sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )
+}
+
+function mapCategoryFromMongo(category) {
+  if (category === 'OtherGoods') return 'Other Goods'
+  if (category === 'infusion') return 'Infusion'
+  return category ?? 'Tablet'
+}
+
+function normalizeMongoItem(item) {
+  if (!item) return null
+
+  return {
+    ...item,
+    id: String(item._id ?? item.id),
+    name: item.name ?? '',
+    category: mapCategoryFromMongo(item.category),
+
+    recentScore: item.recentScore ?? 0,
+    recentUsedOn: item.recentUsedOn ?? '',
+    recentEditedOn: item.recentEditedOn ?? '',
+    deleted: item.deleted ?? false,
+    version: item.version ?? 1,
+
+    batchNo: item.batchNo ?? '',
+    mfgDate: item.mfgDate ?? '',
+    expiryDate: item.expiryDate ?? '',
+    expiryAlert: item.expiryAlert !== false,
+
+    gstSlab: Number(
+      item.gstSlab
+      ?? (Array.isArray(item.gst) ? item.gst[0] : item.gst)
+      ?? 0
+    ),
+    gst: Number(
+      item.gstSlab
+      ?? (Array.isArray(item.gst) ? item.gst[0] : item.gst)
+      ?? 0
+    ),
+
+    purchasePrice: Number(item.purchasePrice ?? 0),
+    salesPrice: Number(item.salesPrice ?? 0),
+    mrp: Number(item.mrp ?? 0),
+    stockQty: Number(item.stockQty ?? 0),
+    discount: Number(item.discount ?? 0),
+
+    unitType: item.unitType ?? 'Nos',
+    barcode: item.barcode ?? item.Barcode ?? '',
+    hsn: item.hsn ?? '',
+    notesTag: item.notesTag ?? '',
+    notes: item.notes ?? '',
+    status: item.status ?? 'Active',
+  }
 }
 
 export function AppProvider({ children }) {
-  // const initialErpState = useMemo(() => normalizePersistedState(loadErpState()), [])
   const initialErpState = useMemo(
-  () => normalizePersistedState(getDefaultErpState()),
-  []
-)
+    () => normalizePersistedState(getDefaultErpState()),
+    []
+  )
   const [invoices, setInvoices] = useState(initialErpState.invoices)
-  const [parties, setParties] = useState(initialErpState.parties)
+  const [parties, setParties] = useState([])
   const [purchases, setPurchases] = useState(initialErpState.purchases)
   const [expenses, setExpenses] = useState(initialErpState.expenses)
   const [workers, setWorkers] = useState(initialErpState.workers)
@@ -134,10 +276,95 @@ export function AppProvider({ children }) {
   const [bankAccounts, setBankAccounts] = useState(SAMPLE_BANK_ACCOUNTS)
   const [cashTransactions] = useState(SAMPLE_CASH_TRANSACTIONS)
   const [backupSettings, setBackupSettings] = useState(SAMPLE_BACKUP_SETTINGS)
-  const [items, setItems] = useState(() => {
-    if (initialErpState.items?.length) return initialErpState.items
-    return buildInitialItemMaster({ sales: initialErpState.invoices, purchases: initialErpState.purchases })
-  })
+    const [items, setItems] = useState(() => {
+      if (initialErpState.items?.length) return initialErpState.items
+      return buildInitialItemMaster({ sales: initialErpState.invoices, purchases: initialErpState.purchases })
+    })
+
+
+  useEffect(() => {
+    const loadPartiesFromMongoDB = async () => {
+      try {
+        const response = await fetch('/api/newParty')
+
+        const result = await response.json()
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || 'Failed to fetch parties'
+          )
+        }
+
+        console.log('MongoDB parties:', result.data)
+
+        setParties(result.data || [])
+      } catch (error) {
+        console.error(
+          'Failed to load parties from MongoDB:',
+          error
+        )
+      }
+    }
+
+    loadPartiesFromMongoDB()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function refreshFromDatabase() {
+      try {
+        const freshInvoices = await INIT_INVOICES()
+
+        if (cancelled) return
+
+        setInvoices(freshInvoices)
+      } catch (error) {
+        console.error("Invoice refresh failed:", error)
+      }
+    }
+
+    refreshFromDatabase()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const deleteParty = useCallback((partyId) => {
+    setParties((prev) =>
+      prev.filter(
+        (party) => String(party._id) !== String(partyId)
+      )
+    )
+  }, [])
+
+  useEffect(() => {
+    const loadItemsFromMongoDB = async () => {
+      try {
+        const response = await fetch('/api/itemContent')
+        const result = await response.json()
+
+        console.log('ITEM GET STATUS:', response.status)
+        console.log('ITEM GET RESPONSE:', result)
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message || 'Failed to fetch items'
+          )
+        }
+
+        const mongoItems = (result.data || []).map(normalizeMongoItem)
+
+        setItems(mongoItems)
+      } catch (error) {
+        console.error('❌ Failed to load items from MongoDB:', error)
+      }
+    }
+
+    loadItemsFromMongoDB()
+  }, [])
+
 
   useEffect(() => {
     saveErpState({
@@ -216,43 +443,74 @@ export function AppProvider({ children }) {
       return Array.from(existingByName.values())
     })
   }, [])
-
-  const addInvoice = useCallback((invoice) => {
-    const id = genInvoiceId(invoices)
-    const nextInvoice = createInvoiceRecord(invoice, id)
-    setInvoices((prev) => {
-      pushUndo(() => setInvoices((current) => current.filter((row) => row.id !== id)))
-      return [nextInvoice, ...prev]
+  const recordPayment = useCallback(async (invoiceId, amount) => {
+    const response = await fetch(`/api/newInvoice/${invoiceId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        paymentAmount: Number(amount),
+      }),
     })
-    touchItemsFromDocument(nextInvoice.items, nextInvoice.date)
-    return nextInvoice
-  }, [invoices, touchItemsFromDocument])
 
-  const recordPayment = useCallback((invoiceId, amount) => {
-    setInvoices((prev) => prev.map((invoice) => {
-      if (invoice.id !== invoiceId) return invoice
-      const newPaid = invoice.paid + parseFloat(amount)
-      const status = newPaid >= invoice.total ? 'Paid' : newPaid > 0 ? 'Partial' : 'Pending'
-      return { ...invoice, paid: newPaid, status }
-    }))
+    const result = await response.json()
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Failed to record payment")
+    }
+
+    const updatedInvoice = normalizeInvoice(result.data)
+
+    setInvoices((prev) =>
+      prev.map((invoice) =>
+        String(invoice.id) === String(invoiceId)
+          ? updatedInvoice
+          : invoice
+      )
+    )
+
+    return updatedInvoice
   }, [])
 
-  const deleteInvoice = useCallback((invoiceId) => {
-    setInvoices((prev) => {
-      const deleted = prev.find((invoice) => invoice.id === invoiceId)
-      pushUndo(() => setInvoices((current) => [deleted, ...current]))
-      return prev.filter((invoice) => invoice.id !== invoiceId)
-    })
+  const deleteInvoice = useCallback(async (invoiceId) => {
+    const response = await fetch(
+      `/api/newInvoice/${invoiceId}`,
+      {
+        method: "DELETE",
+      }
+    )
+
+    const result = await response.json()
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || "Failed to delete invoice"
+      )
+    }
+
+    setInvoices((prev) =>
+      prev.filter(
+        (invoice) =>
+          String(invoice.id) !== String(invoiceId)
+      )
+    )
+
+    return true
   }, [])
 
   const addParty = useCallback((party) => {
-    setParties((prev) => [...prev, createPartyRecord(party)])
+    setParties((prev) => [party, ...prev])
   }, [])
 
   const updateParty = useCallback((partyId, updates) => {
-    setParties((prev) => prev.map((party) => (
-      party.id === partyId ? { ...party, ...updates } : party
-    )))
+    setParties((prev) =>
+      prev.map((party) =>
+        String(party._id) === String(partyId)
+          ? { ...party, ...updates }
+          : party
+      )
+    )
   }, [])
 
   const addPurchase = useCallback((purchase) => {
@@ -263,7 +521,7 @@ export function AppProvider({ children }) {
 
   const getPartyPurchases = useCallback((supplierName) =>
     purchases.filter((purchase) => purchase.supplier?.toLowerCase() === supplierName?.toLowerCase())
-  , [purchases])
+    , [purchases])
 
   const addExpense = useCallback((expense) => {
     setExpenses((prev) => [createExpenseRecord(expense), ...prev])
@@ -332,61 +590,127 @@ export function AppProvider({ children }) {
     setBankAccounts((prev) => prev.filter((account) => account.id !== accountId))
   }, [])
 
-  const addItem = useCallback((item) => {
-    setItems((prev) => [
-      {
-        id: `itm-${Date.now()}`,
-        recentScore: 2,
-        recentUsedOn: '',
-        recentEditedOn: todayStamp(),
-        deleted: false,
-        version: 1,
-        batchNo: item.batchNo || '',
-        mfgDate: item.mfgDate || '',
-        expiryDate: item.expiryDate || '',
-        expiryAlert: item.expiryAlert !== false,
-        gst: item.gst ?? item.gstSlab ?? 18,
-        mrp: item.mrp ?? item.salesPrice ?? 0,
-        discount: item.discount ?? 0,
-        notesTag: item.notesTag || '',
-        notes: item.notes || '',
-        ...item,
-      },
-      ...prev,
-    ])
+  const addItem = useCallback(async (item) => {
+    try {
+      const response = await fetch('/api/itemContent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(item),
+      })
+
+      const text = await response.text()
+
+      console.log("ITEM POST STATUS:", response.status)
+      console.log("ITEM POST RAW RESPONSE:", text)
+
+      let result
+
+      try {
+        result = JSON.parse(text)
+      } catch {
+        throw new Error(
+          `API returned non-JSON response (${response.status})`
+        )
+      }
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || 'Failed to create item'
+        )
+      }
+
+      const newItem = normalizeMongoItem(result.data)
+
+      setItems((prev) => [
+        newItem,
+        ...prev,
+      ])
+
+      return newItem
+
+    } catch (error) {
+      console.error('❌ Failed to create item:', error)
+      throw error
+    }
   }, [])
 
-  const updateItem = useCallback((itemId, updates) => {
-    setItems((prev) => prev.map((item) => (
-      item.id === itemId
-        ? {
-            ...item,
-            ...updates,
-            version: (item.version || 1) + 1,
-            recentScore: (item.recentScore || 0) + 3,
-            recentEditedOn: todayStamp(),
-          }
-        : item
-    )))
+  const updateItem = useCallback(async (itemId, updates) => {
+    try {
+      const response = await fetch('/api/itemContent', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: itemId,
+          ...updates,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || 'Failed to update item'
+        )
+      }
+
+      const updatedItem = normalizeMongoItem(result.data)
+
+      setItems((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(itemId)
+            ? updatedItem
+            : item
+        )
+      )
+
+      return updatedItem
+    } catch (error) {
+      console.error('❌ Failed to update item:', error)
+      throw error
+    }
   }, [])
 
-  const deleteItem = useCallback((itemId) => {
-    setItems((prev) => prev.map((item) => (
-      item.id === itemId
-        ? { ...item, deleted: true, status: 'Deleted', recentEditedOn: todayStamp() }
-        : item
-    )))
+  const deleteItem = useCallback(async (itemId) => {
+    try {
+      const response = await fetch(
+        `/api/itemContent?id=${encodeURIComponent(itemId)}`,
+        {
+          method: 'DELETE',
+        }
+      )
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || 'Failed to delete item'
+        )
+      }
+
+      setItems((prev) =>
+        prev.filter((item) => String(item.id) !== String(itemId))
+      )
+
+      return true
+    } catch (error) {
+      console.error('❌ Failed to delete item:', error)
+      throw error
+    }
   }, [])
 
   const touchRecentItem = useCallback((itemId, reason = 'used') => {
     setItems((prev) => prev.map((item) => (
       item.id === itemId
         ? {
-            ...item,
-            recentScore: (item.recentScore || 0) + (reason === 'edited' ? 4 : 6),
-            recentUsedOn: reason === 'used' ? todayStamp() : item.recentUsedOn,
-            recentEditedOn: reason === 'edited' ? todayStamp() : item.recentEditedOn,
-          }
+          ...item,
+          recentScore: (item.recentScore || 0) + (reason === 'edited' ? 4 : 6),
+          recentUsedOn: reason === 'used' ? todayStamp() : item.recentUsedOn,
+          recentEditedOn: reason === 'edited' ? todayStamp() : item.recentEditedOn,
+        }
         : item
     )))
   }, [])
@@ -429,7 +753,7 @@ export function AppProvider({ children }) {
 
   const importFromParsedPayload = useCallback((importResult, options = {}) =>
     importData(importResult, options)
-  , [importData])
+    , [importData])
 
   const clearImportedData = useCallback(() => {
     const defaults = resetRuntimeErpState()
@@ -439,7 +763,7 @@ export function AppProvider({ children }) {
 
   const getPartyInvoices = useCallback((partyName) =>
     invoices.filter((invoice) => invoice.party === partyName)
-  , [invoices])
+    , [invoices])
 
   const getPartyProfit = useCallback((partyName) => {
     const sales = invoices.filter((invoice) => invoice.party === partyName).reduce((sum, invoice) => sum + invoice.total, 0)
@@ -549,11 +873,11 @@ export function AppProvider({ children }) {
       revenueData,
       importMeta,
       erpData,
-      addInvoice,
       recordPayment,
       deleteInvoice,
       addParty,
       updateParty,
+      deleteParty,
       addPurchase,
       getPartyPurchases,
       addExpense,

@@ -71,7 +71,7 @@ export default function SalesPage() {
   /* Table columns */
   const cols = [
     {
-      key: 'id', label: 'Invoice #', mono: true,
+      key: 'invoiceNumber', label: 'Invoice #', mono: true,
       render: v => (
         <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ink-40)' }}>{v}</span>
       ),

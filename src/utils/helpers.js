@@ -35,12 +35,6 @@ export const addDays = (dateStr, days) => {
   return d.toISOString().slice(0, 10)
 }
 
-/** Generate next invoice ID */
-export const genInvoiceId = (invoices) => {
-  const nums = invoices.map(i => parseInt(i.id.split('-')[2] || '0')).filter(Boolean)
-  const next = nums.length ? Math.max(...nums) + 1 : 119
-  return `INV-2025-${next}`
-}
 
 /** Debounce function */
 export const debounce = (fn, delay = 300) => {

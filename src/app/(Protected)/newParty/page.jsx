@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useApp } from '@/context/AppContext.jsx'
 import { useToast } from '@/context/ToastContext.jsx'
 import useKeyboard from '@/hooks/useKeyboard.js'
@@ -19,15 +19,21 @@ const STATUS_OPTIONS = ['Active', 'Blocked', 'Archived']
 
 export default function PartyFormPage() {
   const router = useRouter()
-  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
   const { parties, addParty, updateParty } = useApp()
+
+  const editingId = searchParams.get('partyId')
   const toast = useToast()
-  const editingId = pathname.state?.partyId ?? null
   const editingParty = useMemo(
-    () => parties.find((party) => party.id === editingId) ?? null,
+    () =>
+      parties.find(
+        (party) =>
+          String(party._id) === String(editingId)
+      ) ?? null,
     [editingId, parties],
   )
-  const [form, setForm] = useState(() => createInitialForm(editingParty))
+  const [form, setForm] = useState(createInitialFormEmpty)
   const [errors, setErrors] = useState({})
   const crmScrollRef = useRef(null)
 
@@ -88,66 +94,148 @@ export default function PartyFormPage() {
     }))
   }
 
-  const submitParty = () => {
+  const submitParty = async () => {
+    // 1. Validate
     const nextErrors = {}
-    if (!form.companyName.trim()) nextErrors.companyName = 'Company or party name is required'
-    if (!form.partyCode.trim()) nextErrors.partyCode = 'Party code is required'
-    setErrors(nextErrors)
-    if (Object.keys(nextErrors).length) return false
 
+    if (!form.companyName.trim()) {
+      nextErrors.companyName = 'Company or party name is required'
+    }
+
+    if (!form.partyCode.trim()) {
+      nextErrors.partyCode = 'Party code is required'
+    }
+
+    setErrors(nextErrors)
+
+    if (Object.keys(nextErrors).length > 0) {
+      return false
+    }
+
+    // 2. Build payload
     const payload = {
-      name: form.companyName.trim(),
-      type: form.partyType,
-      phone: form.phone,
-      city: form.billingAddress.city,
-      gstin: form.taxId,
-      companyName: form.companyName.trim(),
-      partyCode: form.partyCode.trim(),
+      partyType: form.partyType,
       accountGroup: form.accountGroup,
-      logo: form.logo,
-      contactPerson: form.primaryContactName,
+
+      companyName: form.companyName.trim(),
+      partyCode: Number(form.partyCode),
+
+      taxID: form.taxId,
+
       primaryContactName: form.primaryContactName,
-      contactRole: form.primaryContactRole,
+      primaryContactRole: form.primaryContactRole,
+
+      phone: Number(form.phone),
       email: form.email,
-      website: form.website,
-      taxId: form.taxId,
-      paymentTerms: form.paymentTerms,
+
+      address: {
+        addressLine1: form.billingAddress.addressLine1,
+        city: form.billingAddress.city,
+        state: form.billingAddress.state,
+        postalCode: form.billingAddress.postalCode,
+        country: form.billingAddress.country,
+      },
+
+      paymentTerm: form.paymentTerms,
+
       creditLimit: Number(form.creditLimit) || 0,
-      discountStructure: form.discountStructure,
       currency: form.currency,
-      bankDetails: {
+      discountStructure: Number(form.discountStructure) || 0,
+
+      bank: {
+        bankName: form.bankName,
         ifsc: form.ifsc,
         accountNo: form.accountNo,
-        bankName: form.bankName,
       },
-      billingAddress: form.billingAddress,
-      shippingAddresses: form.shippingAddresses.filter((address) => Object.values(address).some(Boolean)),
-      pathname: {
-        latitude: form.latitude,
-        longitude: form.longitude,
-      },
+
       partnerRoles: form.partnerRoles,
       shippingMethods: form.shippingMethods,
-      workingHours: form.workingHours,
-      deliverySlots: form.deliverySlots,
+
       status: form.status,
-      carrierInfo: form.carrierInfo,
-      supplierDetails: form.supplierDetails,
-      relatedParties: form.relatedParties,
-      notes: form.notes,
-      balance: Number(form.openingBalance) || 0,
+
+      remarks: {
+        notes: form.notes,
+        openingBalance: Number(form.openingBalance) || 0,
+        carrierInfo: form.carrierInfo,
+        supplierDetails: form.supplierDetails,
+      },
+
+      location: {
+        latitude: Number(form.latitude) || 0,
+        longitude: Number(form.longitude) || 0,
+      },
     }
 
-    if (editingParty) {
-      updateParty(editingParty.id, payload)
-      toast(`${payload.name} updated successfully`, 'success')
-    } else {
-      addParty(payload)
-      toast(`${payload.name} added successfully`, 'success')
-    }
+    try {
+      const isEditing = Boolean(editingParty)
 
-    router.push('/parties')
-    return true
+      const method = isEditing ? 'PATCH' : 'POST'
+
+      const url = isEditing
+        ? `/api/newParty/${editingParty._id}`
+        : '/api/newParty'
+
+      console.log('Method:', method)
+      console.log('URL:', url)
+      console.log('Payload:', payload)
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await response.json()
+
+      console.log('Party API response:', result)
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || 'Failed to save party'
+        )
+      }
+
+      const savedParty = result.data
+
+      console.log('Saved party:', savedParty)
+
+      if (isEditing) {
+        updateParty(
+          editingParty._id,
+          savedParty
+        )
+
+        toast(
+          `${savedParty.companyName} updated successfully`,
+          'success'
+        )
+      } else {
+        addParty(savedParty)
+
+        toast(
+          `${savedParty.companyName} added successfully`,
+          'success'
+        )
+      }
+
+      router.push('/parties')
+
+      return true
+
+    } catch (error) {
+      console.error('Failed to save Party:', error)
+
+      toast(
+        error instanceof Error
+          ? error.message
+          : 'Failed to save party',
+        'error'
+      )
+
+      return false
+    }
   }
 
   useEffect(() => {
@@ -291,7 +379,7 @@ export default function PartyFormPage() {
             <Select label="Account group" value={form.accountGroup} onChange={(event) => setField('accountGroup', event.target.value)} options={ACCOUNT_GROUPS} selectClassName="erp-field" />
           </FormGrid>
           <FormGrid cols={2}>
-            <Input  label="Party / Company name *" value={form.companyName} onChange={(event) => setField('companyName', event.target.value)} error={errors.companyName} inputClassName="erp-field" />
+            <Input label="Party / Company name *" value={form.companyName} onChange={(event) => setField('companyName', event.target.value)} error={errors.companyName} inputClassName="erp-field" />
             <Input label="Party code *" value={form.partyCode} onChange={(event) => setField('partyCode', event.target.value.toUpperCase())} error={errors.partyCode} inputClassName="erp-field" />
           </FormGrid>
           <FormGrid cols={2}>
@@ -405,44 +493,151 @@ function emptyShippingAddress() {
 
 function createInitialForm(party) {
   return {
-    partyType: party?.type || 'Customer',
-    companyName: party?.companyName || party?.name || '',
-    partyCode: party?.partyCode || '',
+    partyType: party?.partyType || 'Customer',
+    companyName: party?.companyName || '',
+    partyCode:
+      party?.partyCode !== undefined
+        ? String(party.partyCode)
+        : '',
+
     accountGroup: party?.accountGroup || 'Sundry Debtors',
+
     logo: party?.logo || '',
-    primaryContactName: party?.primaryContactName || party?.contactPerson || '',
-    primaryContactRole: party?.contactRole || '',
+
+    primaryContactName: party?.primaryContactName || '',
+    primaryContactRole: party?.primaryContactRole || '',
+
     email: party?.email || '',
     phone: party?.phone || '',
     website: party?.website || '',
-    taxId: party?.taxId || party?.gstin || '',
+
+    taxId: party?.taxID || '',
+
     billingAddress: {
-      addressLine1: party?.billingAddress?.addressLine1 || '',
-      city: party?.billingAddress?.city || party?.city || '',
-      state: party?.billingAddress?.state || '',
-      postalCode: party?.billingAddress?.postalCode || '',
-      country: party?.billingAddress?.country || 'India',
+      addressLine1: party?.address?.addressLine1 || '',
+      city: party?.address?.city || '',
+      state: party?.address?.state || '',
+      postalCode: party?.address?.postalCode || '',
+      country: party?.address?.country || 'India',
     },
-    shippingAddresses: party?.shippingAddresses?.length ? party.shippingAddresses : [emptyShippingAddress()],
-    latitude: party?.pathname?.latitude || '',
-    longitude: party?.pathname?.longitude || '',
-    paymentTerms: party?.paymentTerms || 'Net 30',
-    creditLimit: String(party?.creditLimit || ''),
-    discountStructure: party?.discountStructure || '',
+
+    shippingAddresses:
+      party?.shippingAddresses?.length
+        ? party.shippingAddresses.map((address) => ({
+            addressLine1: address?.addressLine1 || '',
+            city: address?.city || '',
+            state: address?.state || '',
+            postalCode: address?.postalCode || '',
+            country: address?.country || 'India',
+          }))
+        : [emptyShippingAddress()],
+
+    latitude:
+      party?.location?.latitude !== undefined
+        ? String(party.location.latitude)
+        : '',
+
+    longitude:
+      party?.location?.longitude !== undefined
+        ? String(party.location.longitude)
+        : '',
+
+    paymentTerms: party?.paymentTerm || '',
+
+    creditLimit:
+      party?.creditLimit !== undefined
+        ? String(party.creditLimit)
+        : '',
+
+    discountStructure:
+      party?.discountStructure !== undefined
+        ? String(party.discountStructure)
+        : '',
+
     currency: party?.currency || 'INR',
-    bankName: party?.bankDetails?.bankName || '',
-    ifsc: party?.bankDetails?.ifsc || '',
-    accountNo: party?.bankDetails?.accountNo || '',
-    partnerRoles: party?.partnerRoles || ['Sold-To', 'Bill-To'],
-    shippingMethods: party?.shippingMethods || ['Road'],
-    workingHours: party?.workingHours || '09:00 - 18:00',
-    deliverySlots: party?.deliverySlots || '09:00 - 13:00',
+
+    bankName: party?.bank?.bankName || '',
+    ifsc: party?.bank?.ifsc || '',
+    accountNo: party?.bank?.accountNo || '',
+
+    partnerRoles: party?.partnerRoles || [],
+    shippingMethods: party?.shippingMethods || [],
+
+    workingHours: party?.workingHours || '',
+    deliverySlots: party?.deliverySlots || '',
+
     status: party?.status || 'Active',
-    carrierInfo: party?.carrierInfo || '',
-    supplierDetails: party?.supplierDetails || '',
+
+    carrierInfo: party?.remarks?.carrierInfo || '',
+    supplierDetails: party?.remarks?.supplierDetails || '',
     relatedParties: party?.relatedParties || '',
-    notes: party?.notes || '',
-    openingBalance: party?.balance !== undefined && party?.balance !== null ? String(party.balance) : '',
+
+    notes: party?.remarks?.notes || '',
+
+    openingBalance:
+      party?.remarks?.openingBalance !== undefined &&
+      party?.remarks?.openingBalance !== null
+        ? String(party.remarks.openingBalance)
+        : '',
+  }
+}
+function createInitialFormEmpty() {
+  return {
+    partyType: '',
+    companyName: '',
+    partyCode: '',
+    accountGroup: '',
+    logo: '',
+
+    primaryContactName: '',
+    primaryContactRole: '',
+    email: '',
+    phone: '',
+    website: '',
+    taxId: '',
+
+    billingAddress: {
+      addressLine1: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: '',
+    },
+
+    shippingAddresses: [
+      {
+        addressLine1: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: '',
+      },
+    ],
+
+    latitude: '',
+    longitude: '',
+
+    paymentTerms: '',
+    creditLimit: '',
+    discountStructure: '',
+    currency: '',
+
+    bankName: '',
+    ifsc: '',
+    accountNo: '',
+
+    partnerRoles: [],
+    shippingMethods: [],
+
+    workingHours: '',
+    deliverySlots: '',
+    status: '',
+
+    carrierInfo: '',
+    supplierDetails: '',
+    relatedParties: '',
+    notes: '',
+    openingBalance: '',
   }
 }
 

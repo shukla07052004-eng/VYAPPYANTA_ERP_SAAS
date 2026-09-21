@@ -16,7 +16,7 @@ import Button from '@/components/frontendUi/Button.jsx'
 import Modal from '@/components/frontendUi/Modal.jsx'
 import { consumeSequentialEnter } from '@/utils/erpEnterNav.js'
 import { fmt, fmtShort, todayISO } from '@/utils/helpers.js'
-import {itemFormHeroStyle, heroMetaChipStyle, itemFieldStyle, sectionLabelStyle, selectorFrameStyle, productTypeSelectorStyle, productTypeValueStyle, productTypeHintStyle, gstArrowButtonStyle, alertCardStyle, gstSelectorStyle, gstValueStyle, stickyFooterStyle, formSectionStyle} from "./itemsCss"
+import { itemFormHeroStyle, expiryBadgeStyle, heroMetaChipStyle, itemFieldStyle, sectionLabelStyle, selectorFrameStyle, productTypeSelectorStyle, productTypeValueStyle, productTypeHintStyle, gstArrowButtonStyle, alertCardStyle, gstSelectorStyle, gstValueStyle, stickyFooterStyle, formSectionStyle } from "./itemsCss"
 import ErpImportModal from '@/components/layout/ErpImportModel'
 
 const STATUS_OPTIONS = ['Active', 'Inactive', 'Discontinued']
@@ -28,7 +28,7 @@ let lastSelectedGstSlab = 12
 
 
 export default function ItemsMasterPage() {
-  const { itemMaster, addItem, updateItem, deleteItem, touchRecentItem } = useApp()
+  const { itemMaster, deleteItem, touchRecentItem } = useApp()
   const mounted = useHydration()
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('All Product Types')
@@ -50,7 +50,7 @@ export default function ItemsMasterPage() {
   return (
     <div className="animate-slide">
       <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="products" />
-      
+
       {mounted && (
         <>
           <PageHeader
@@ -102,9 +102,7 @@ export default function ItemsMasterPage() {
       <ItemEditorModal
         value={editor}
         onClose={() => setEditor(null)}
-        onSave={(payload, mode = 'close') => {
-          if (payload.id) updateItem(payload.id, payload)
-          else addItem(payload)
+        onSave={(_savedItem, mode = 'close') => {
           setEditor(mode === 'new' ? createEmptyItem() : null)
         }}
       />
@@ -125,8 +123,11 @@ function ItemEditorModal({ value, onClose, onSave }) {
 function ItemEditorForm({ initialValue, onClose, onSave }) {
   const [form, setForm] = useState(() => normalizeItemForm(initialValue))
   const [errors, setErrors] = useState({})
+  const [isSaving, setIsSaving] = useState(false)
   const fieldRefs = useRef([])
   const saveButtonRef = useRef(null)
+  const saveInFlightRef = useRef(false)
+  const { addItem, updateItem } = useApp()
 
   useEffect(() => {
     setForm(normalizeItemForm(initialValue))
@@ -154,14 +155,41 @@ function ItemEditorForm({ initialValue, onClose, onSave }) {
     return Object.keys(nextErrors).length === 0
   }, [])
 
-  const commitSave = useCallback((mode = 'close') => {
-    const payload = sanitizeItemForm(form)
-    if (!validate(payload)) return
+  const commitSave = useCallback(async (mode = 'close') => {
+    if (saveInFlightRef.current || isSaving) {
+      return false
+    }
 
-    lastSelectedProductType = payload.category
-    lastSelectedGstSlab = payload.gstSlab
-    onSave(payload, mode)
-  }, [form, onSave, validate])
+    const payload = sanitizeItemForm(form)
+
+    if (!validate(payload)) {
+      return false
+    }
+
+    saveInFlightRef.current = true
+    setIsSaving(true)
+
+    try {
+      const saved = form.id
+        ? await updateItem(form.id, payload)
+        : await addItem(payload)
+
+      onSave?.(saved, mode)
+      return true
+    } catch (error) {
+      console.error('❌ Item save failed:', error)
+
+      setErrors((current) => ({
+        ...current,
+        form: error.message || 'Failed to save item',
+      }))
+
+      return false
+    } finally {
+      saveInFlightRef.current = false
+      setIsSaving(false)
+    }
+  }, [form, isSaving, onSave, validate, addItem, updateItem])
 
   const handleFieldKeyDown = useCallback((event, index) => {
     consumeSequentialEnter(event, index, fieldRefs.current, {
@@ -354,10 +382,12 @@ function ItemEditorForm({ initialValue, onClose, onSave }) {
       {errors.form && <div style={{ color: 'var(--red)', fontSize: 12 }}>{errors.form}</div>}
 
       <div style={stickyFooterStyle}>
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="ghost" onClick={onClose} disabled={isSaving}>Cancel</Button>
         <Button
           variant="secondary"
+          disabled={isSaving}
           onKeyDown={(event) => {
+            if (isSaving) return
             if (event.key === 'Enter' && event.shiftKey) {
               event.preventDefault()
               saveButtonRef.current?.focus?.({ preventScroll: true })
@@ -365,12 +395,14 @@ function ItemEditorForm({ initialValue, onClose, onSave }) {
           }}
           onClick={() => commitSave('new')}
         >
-          Save & New
+          {isSaving ? 'Saving…' : 'Save & New'}
         </Button>
         <Button
           ref={saveButtonRef}
           variant="primary"
+          disabled={isSaving}
           onKeyDown={(event) => {
+            if (isSaving) return
             if (event.key === 'Enter' && event.shiftKey) {
               event.preventDefault()
               fieldRefs.current[14]?.focus?.({ preventScroll: true })
@@ -381,7 +413,7 @@ function ItemEditorForm({ initialValue, onClose, onSave }) {
           }}
           onClick={() => commitSave('close')}
         >
-          Save Item
+          {isSaving ? 'Saving…' : 'Save Item'}
         </Button>
       </div>
     </div>
@@ -422,6 +454,15 @@ function createEmptyItem() {
   }
 }
 
+function normalizeMongoItem(item) {
+  if (!item) return null
+
+  return {
+    ...item,
+    id: String(item._id ?? item.id),
+  }
+}
+
 function normalizeItemForm(value = {}) {
   const next = {
     ...createEmptyItem(),
@@ -450,23 +491,40 @@ function normalizeItemForm(value = {}) {
 
 function sanitizeItemForm(form) {
   return {
-    ...form,
     name: String(form.name || '').trim(),
-    category: PRODUCT_TYPE_OPTIONS.includes(form.category) ? form.category : 'Other Goods',
-    batchNo: String(form.batchNo || '').trim().toUpperCase(),
+
+    category: PRODUCT_TYPE_OPTIONS.includes(form.category)
+      ? form.category
+      : 'Other Goods',
+
+    batchNo: String(form.batchNo || '')
+      .trim()
+      .toUpperCase(),
+
     mfgDate: form.mfgDate || '',
     expiryDate: form.expiryDate || '',
     expiryAlert: Boolean(form.expiryAlert),
+
     gstSlab: parseDecimalValue(form.gstSlab),
     gst: parseDecimalValue(form.gstSlab),
+
     purchasePrice: parseDecimalValue(form.purchasePrice),
     salesPrice: parseDecimalValue(form.salesPrice),
     mrp: parseDecimalValue(form.mrp),
     stockQty: parseDecimalValue(form.stockQty),
     discount: parseDecimalValue(form.discount),
+
+    unitType: form.unitType || 'Nos',
+
     barcode: String(form.barcode || '').trim(),
-    notesTag: String(form.notesTag || '').trim().toUpperCase(),
+    hsn: String(form.hsn || '').trim(),
+
+    notesTag: String(form.notesTag || '')
+      .trim()
+      .toUpperCase(),
+
     notes: String(form.notes || '').trim(),
+
     status: form.status || 'Active',
   }
 }

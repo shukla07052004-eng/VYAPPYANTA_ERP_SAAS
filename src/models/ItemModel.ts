@@ -1,36 +1,36 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface Item extends Document {
-    itemName: string;
-    batchNumber: string;
-    productType: string;
-    manufacturingDate: Date;
+    name: string;
+    batchNo: string;
+    category: string;
+    mfgDate: Date;
     expiryDate: Date;
     Barcode: string;
     expiryAlert: boolean;
     purchasePrice: number;
     salesPrice: number;
-    MRP: number;
+    mrp: number;
     stockQty: number;
-    Discount: number;
-    storageNoteTag: string;
-    GST: Array<number>;
-    Notes: string;
+    discount: number;
+    notesTag: string;
+    gst: Array<number>;
+    notes: string;
 }
 
 const ItemSchema: Schema<Item> = new Schema(
     {
-        itemName: {
+        name: {
             type: String,
             required: true,
             lowercase: true
         },
-        batchNumber: {
+        batchNo: {
             type: String,
             required: true,
             trim: true
         },
-        productType: {
+        category: {
             type: String,
             required: true,
             enum: [
@@ -38,12 +38,14 @@ const ItemSchema: Schema<Item> = new Schema(
                 "Capsule",
                 "Softgel",
                 "Syrup",
+                "Infusion",
                 "infusion",
                 "Injection",
-                "OtherGoods"
+                "Other Goods",
+                "OtherGoods",
             ]
         },
-        manufacturingDate: {
+        mfgDate: {
             type: Date,
             required: true
         },
@@ -68,7 +70,7 @@ const ItemSchema: Schema<Item> = new Schema(
             type: Number,
             trim: true
         },
-        MRP: {
+        mrp: {
             type: Number,
             required: true,
         },
@@ -76,18 +78,18 @@ const ItemSchema: Schema<Item> = new Schema(
             type: Number,
             required: true,
         },
-        Discount: {
+        discount: {
             type: Number,
         },
-        GST: {
+        gst: {
             type: [Number],
             enums: [0, 5, 12, 18, 28],
             required: true
         },
-        storageNoteTag: {
+        notesTag: {
             type: String,
         },
-        Notes: {
+        notes: {
             type: String,
         },
 
