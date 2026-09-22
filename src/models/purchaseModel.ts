@@ -1,81 +1,232 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { Types } from "mongoose";
 
-export interface Purchase extends Document {
-    PurchaseIds: string[];
-    Patry: Types.ObjectId;
-    invDate: Date;
-    dueDate: Date;
-    invType:Array<string>;
-    itemName: Types.ObjectId;
-    HSN:string;
-    Quantity:number;
-    Rate:number;
-    Disc:number;
-    GST:Array<number>;
-    amount:number;
-    paymentTerms:Array<string>;
+interface ISupplier {
+    Party: string;
+    phone?: string;
+    city?: string;
+    gstin?: string;
+    contactPerson?: string;
+    billingAddress?: string;
 }
 
-const PurchaseSchema: Schema<Purchase> = new Schema(
-    {
-        PurchaseIds:[
-            {
-                type:String
-            }
-        ],
-        Patry:{
-            type: Schema.Types.ObjectId,
-            ref: "Party",
-        },
-        invDate:{
-            type:Date,
-            required:true
-        },
-        dueDate:{
-            type:Date,
-            required:true
-        },
-        invType:{
-           enum:["Retail Invoice", "Tax Invoice", "PerformaInvoice"]
-        },
-        itemName:{
-           type: Schema.Types.ObjectId,
-           ref:"Item"
-        },
-        HSN:{
-            type:String,
-            trim:true
-        },
-        Quantity:{
-            type:Number,
-            required:true,
-        },
-        Rate:{
-            type:Number,
-            required:true,
-        },
-        Disc:{
-            type:Number,
-        },
-        GST:{
-            enums:[0, 5, 12, 18, 28],
-            required: true
-        },
-        amount:{
-            type:Number,
-            required:true
-        },
-        paymentTerms:{
-            enum:["CREDIT", "CASH", "BANK", "UPI", "AGAINST GNR"]
-        }
+interface IItem {
+    desc: string;
+    hsn?: string;
+    qty: number;
+    rate: number;
+    discountPct: number;
+    taxPct: number;
+    taxLabel: string;
+    baseAmount: number;
+    taxAmount: number;
+    amount: number;
+}
 
+interface ITaxBreakdown {
+    rate: number;
+    taxable: number;
+}
+
+export interface Purchase extends Document {
+    billNo: string;
+    customer: ISupplier;
+    date: Date;
+    dueDate: Date;
+    purchaseType: string;
+    items: IItem[];
+    subtotal: number;
+    tax: number;
+    taxBreakdown: ITaxBreakdown[];
+    amount: number;
+    paid: number;
+    mode: string;
+    status: string;
+    notes?: string;
+}
+
+const SupplierSchema = new Schema<ISupplier>(
+    {
+        Party: {
+            type: mongoose.Types.ObjectId,
+            required: true,
+        },
+
+        phone: {
+            type: String,
+        },
+
+        city: {
+            type: String,
+        },
+
+        gstin: {
+            type: String,
+        },
+
+        contactPerson: {
+            type: String,
+        },
+
+        billingAddress: {
+            type: String,
+        },
+    },
+    { _id: false }
+);
+
+const ItemSchema = new Schema<IItem>(
+    {
+        desc: {
+            type: String,
+            required: true,
+        },
+
+        hsn: {
+            type: String,
+        },
+
+        qty: {
+            type: Number,
+            required: true,
+        },
+
+        rate: {
+            type: Number,
+            required: true,
+        },
+
+        discountPct: {
+            type: Number,
+            required: true,
+        },
+
+        taxPct: {
+            type: Number,
+            required: true,
+        },
+
+        taxLabel: {
+            type: String,
+            required: true,
+        },
+
+        baseAmount: {
+            type: Number,
+            required: true,
+        },
+
+        taxAmount: {
+            type: Number,
+            required: true,
+        },
+
+        amount: {
+            type: Number,
+            required: true,
+        },
+    },
+    { _id: false }
+);
+
+const TaxBreakdownSchema = new Schema<ITaxBreakdown>(
+    {
+        rate: {
+            type: Number,
+            required: true,
+        },
+
+        taxable: {
+            type: Number,
+            required: true,
+        },
+    },
+    { _id: false }
+);
+
+const PurchaseSchema = new Schema<Purchase>(
+    {
+        billNo: {
+            type: String,
+            required: true,
+            unique: true,
+        },
+
+        customer: {
+            type: SupplierSchema,
+            required: true,
+        },
+
+        date: {
+            type: Date,
+            required: true,
+        },
+
+        dueDate: {
+            type: Date,
+            required: true,
+        },
+
+        purchaseType: {
+            type: String,
+            enum: ["Purchase Bill", "Debit Note"],
+            required: true,
+        },
+
+        items: {
+            type: [ItemSchema],
+            required: true,
+            validate: {
+                validator: (items: IItem[]) => items.length > 0,
+                message: "At least one purchase item is required",
+            },
+        },
+
+        subtotal: {
+            type: Number,
+            required: true,
+        },
+
+        tax: {
+            type: Number,
+            required: true,
+        },
+
+        taxBreakdown: {
+            type: [TaxBreakdownSchema],
+            default: [],
+        },
+
+        amount: {
+            type: Number,
+            required: true,
+        },
+
+        paid: {
+            type: Number,
+            default: 0,
+        },
+
+        mode: {
+            type: String,
+            enum: ["Credit", "Cash", "Bank", "UPI", "Against GRN"],
+            default: "Credit",
+        },
+
+        status: {
+            type: String,
+            enum: ["Unpaid", "Partial", "Paid"],
+            default: "Unpaid",
+        },
+
+        notes: {
+            type: String,
+        },
     },
     {
-        timestamps: true
+        timestamps: true,
     }
 );
 
-
 export const Purchase =
-    mongoose.models.Purchase || mongoose.model<Purchase>("Purchase", PurchaseSchema);
+    mongoose.models.Purchase ||
+    mongoose.model<Purchase>("Purchase", PurchaseSchema);

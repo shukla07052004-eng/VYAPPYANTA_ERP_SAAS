@@ -98,11 +98,11 @@ export default function PartyFormPage() {
     // 1. Validate
     const nextErrors = {}
 
-    if (!form.companyName.trim()) {
+    if (!form.companyName) {
       nextErrors.companyName = 'Company or party name is required'
     }
 
-    if (!form.partyCode.trim()) {
+    if (!form.partyCode) {
       nextErrors.partyCode = 'Party code is required'
     }
 
@@ -117,15 +117,16 @@ export default function PartyFormPage() {
       partyType: form.partyType,
       accountGroup: form.accountGroup,
 
-      companyName: form.companyName.trim(),
-      partyCode: Number(form.partyCode),
+      companyName: form.companyName,
+      partyCode: form.partyCode,
 
+      gstin: form.gstin,
       taxID: form.taxId,
 
       primaryContactName: form.primaryContactName,
       primaryContactRole: form.primaryContactRole,
 
-      phone: Number(form.phone),
+      phone: form.phone,
       email: form.email,
 
       address: {
@@ -140,7 +141,8 @@ export default function PartyFormPage() {
 
       creditLimit: Number(form.creditLimit) || 0,
       currency: form.currency,
-      discountStructure: Number(form.discountStructure) || 0,
+
+      discountStructure: form.discountStructure,
 
       bank: {
         bankName: form.bankName,
@@ -164,7 +166,10 @@ export default function PartyFormPage() {
         latitude: Number(form.latitude) || 0,
         longitude: Number(form.longitude) || 0,
       },
-    }
+
+      balance: Number(form.openingBalance) || 0,
+      drCr: "Dr",
+    };
 
     try {
       const isEditing = Boolean(editingParty)
@@ -524,12 +529,12 @@ function createInitialForm(party) {
     shippingAddresses:
       party?.shippingAddresses?.length
         ? party.shippingAddresses.map((address) => ({
-            addressLine1: address?.addressLine1 || '',
-            city: address?.city || '',
-            state: address?.state || '',
-            postalCode: address?.postalCode || '',
-            country: address?.country || 'India',
-          }))
+          addressLine1: address?.addressLine1 || '',
+          city: address?.city || '',
+          state: address?.state || '',
+          postalCode: address?.postalCode || '',
+          country: address?.country || 'India',
+        }))
         : [emptyShippingAddress()],
 
     latitude:
@@ -576,7 +581,7 @@ function createInitialForm(party) {
 
     openingBalance:
       party?.remarks?.openingBalance !== undefined &&
-      party?.remarks?.openingBalance !== null
+        party?.remarks?.openingBalance !== null
         ? String(party.remarks.openingBalance)
         : '',
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/dbconnect";
-import Invoice from "@/models/salesModel";
-import InvoiceCounter from "@/models/InvoiceCounter";
+import {Purchase} from "@/models/purchaseModel";
+import PurchaseCounter from "@/models/PurchaseCounter";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,9 +21,9 @@ export async function POST(req: NextRequest) {
 
     const year = new Date().getFullYear();
 
-    const counter = await InvoiceCounter.findOneAndUpdate(
+    const counter = await PurchaseCounter.findOneAndUpdate(
       {
-        key: `invoice-${year}`,
+        key: `Purchse-${year}`,
       },
       {
         $inc: {
@@ -36,12 +36,12 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    const invoiceNumber =
-      `INV-${year}-${String(counter.seq).padStart(3, "0")}`;
+    const billNo =
+      `PO-${year}-${String(counter.seq).padStart(4, "0")}`;
 
-    const result = await Invoice.create({
+    const result = await Purchase.create({
       ...data,
-      invoiceNumber,
+      billNo,
     });
 
     return NextResponse.json({
@@ -70,7 +70,7 @@ export async function GET() {
   try {
     await connectDB();
 
-    const invoices = await Invoice
+    const invoices = await Purchase
       .find({})
       .sort({ createdAt: -1 })
       .lean();

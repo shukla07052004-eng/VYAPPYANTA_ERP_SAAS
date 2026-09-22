@@ -4,19 +4,19 @@
 // ============================================================
 "use client"
 import React, { useState } from 'react'
-import { useApp }      from '@/context/AppContext.jsx'
-import { useToast }    from '@/context/ToastContext.jsx'
+import { useApp } from '@/context/AppContext.jsx'
+import { useToast } from '@/context/ToastContext.jsx'
 import { fmt, fmtShort } from '@/utils/helpers.js'
 import useHydration from '@/hooks/useHydration.js'
 import {
   KpiCard, PageHeader, Card, CardHead,
 } from '@/components/frontendUi/index.js'
-import { Avatar, Badge }    from '@/components/frontendUi/index.js'
+import { Avatar, Badge } from '@/components/frontendUi/index.js'
 import { SearchInput, FilterPills } from '@/components/frontendUi/index.js'
 import { Input, Select, FormGrid } from '@/components/frontendUi/index.js'
-import Table       from '@/components/frontendUi/Table.jsx'
-import Modal       from '@/components/frontendUi/Modal.jsx'
-import Button      from '@/components/frontendUi/Button.jsx'
+import Table from '@/components/frontendUi/Table.jsx'
+import Modal from '@/components/frontendUi/Modal.jsx'
+import Button from '@/components/frontendUi/Button.jsx'
 import InvoiceView from '@/components/layout/InvoiceView.jsx'
 import ErpImportModal from '../../../components/layout/ErpImportModel'
 import { useRouter } from 'next/navigation'
@@ -29,13 +29,13 @@ export default function SalesPage() {
   const toast = useToast()
   const mounted = useHydration()
 
-  const [search,      setSearch]      = useState('')
-  const [filter,      setFilter]      = useState('All')
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('All')
   const [viewInvoice, setViewInvoice] = useState(null)
-  const [importOpen,  setImportOpen]  = useState(false)
-  const [payModal,    setPayModal]    = useState(null)   // invoice to pay
-  const [payAmt,      setPayAmt]      = useState('')
-  const [payMode,     setPayMode]     = useState('Cash')
+  const [importOpen, setImportOpen] = useState(false)
+  const [payModal, setPayModal] = useState(null)   // invoice to pay
+  const [payAmt, setPayAmt] = useState('')
+  const [payMode, setPayMode] = useState('Cash')
 
   /* Derived data */
   const filtered = invoices.filter(r => {
@@ -45,9 +45,9 @@ export default function SalesPage() {
     return matchQ && matchF
   })
 
-  const totalBilled  = invoices.reduce((a, b) => a + b.total, 0)
-  const totalPaid    = invoices.reduce((a, b) => a + b.paid,  0)
-  const outstanding  = totalBilled - totalPaid
+  const totalBilled = invoices.reduce((a, b) => a + b.total, 0)
+  const totalPaid = invoices.reduce((a, b) => a + b.paid, 0)
+  const outstanding = totalBilled - totalPaid
   const overdueCount = invoices.filter(i => i.status === 'Pending').length
 
   /* Handle payment recording */
@@ -85,19 +85,28 @@ export default function SalesPage() {
         </div>
       ),
     },
-    { key: 'date',  label: 'Date',     dim: true },
     {
-      key: 'total', label: 'Amount',   right: true,
+      key: 'date',
+      label: 'Date',
+      dim: true,
+      render: v => (
+        <span>
+          {v ? String(v).split('T')[0] : ''}
+        </span>
+      ),
+    },
+    {
+      key: 'total', label: 'Amount', right: true,
       render: v => <span style={{ fontWeight: 600 }}>{fmt(v)}</span>,
     },
     {
-      key: 'paid',  label: 'Received', right: true,
+      key: 'paid', label: 'Received', right: true,
       render: v => (
         <span style={{ color: 'var(--green)', fontWeight: 500 }}>{fmt(v)}</span>
       ),
     },
     {
-      key: '_bal',  label: 'Balance',  right: true, sortable: false,
+      key: '_bal', label: 'Balance', right: true, sortable: false,
       render: (_, row) => {
         const b = row.total - row.paid
         return (
@@ -151,8 +160,8 @@ export default function SalesPage() {
             sub="Invoice management & receivables"
             right={
               <>
-               <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
-                <Button variant="primary" onClick={()=>{router.push('/newInvoice')}}>
+                <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
+                <Button variant="primary" onClick={() => { router.push('/newInvoice') }}>
                   + New Invoice
                 </Button>
               </>
@@ -161,15 +170,15 @@ export default function SalesPage() {
 
           {/* KPIs */}
           <div className="kpi-grid-4" style={{
-            display:             'grid',
+            display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
-            gap:                 14,
-            marginBottom:        22,
+            gap: 14,
+            marginBottom: 22,
           }}>
-            <KpiCard label="Total Billed"   value={fmtShort(totalBilled)}  sub={`${invoices.length} invoices`} />
-            <KpiCard label="Collected"      value={fmtShort(totalPaid)}    />
-            <KpiCard label="Outstanding"    value={fmtShort(outstanding)}  sub={`${overdueCount} unpaid`} />
-            <KpiCard label="Overdue"        value={fmtShort(outstanding)}  sub={`${overdueCount} invoice${overdueCount === 1 ? '' : 's'}`} />
+            <KpiCard label="Total Billed" value={fmtShort(totalBilled)} sub={`${invoices.length} invoices`} />
+            <KpiCard label="Collected" value={fmtShort(totalPaid)} />
+            <KpiCard label="Outstanding" value={fmtShort(outstanding)} sub={`${overdueCount} unpaid`} />
+            <KpiCard label="Overdue" value={fmtShort(outstanding)} sub={`${overdueCount} invoice${overdueCount === 1 ? '' : 's'}`} />
           </div>
 
           <Card>
@@ -177,25 +186,25 @@ export default function SalesPage() {
               title="All Invoices"
               right={
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <SearchInput
-                value={search}
-                onChange={setSearch}
-                placeholder="Search invoices or parties…"
-              />
-              <FilterPills
-                options={FILTERS}
-                value={filter}
-                onChange={setFilter}
-              />
-            </div>
-          }
-        />
-        <Table
-          focusId="sales-invoices"
-          cols={cols}
-          rows={filtered}
-          onRowClick={setViewInvoice}
-          emptyMsg="No invoices match your search"
+                  <SearchInput
+                    value={search}
+                    onChange={setSearch}
+                    placeholder="Search invoices or parties…"
+                  />
+                  <FilterPills
+                    options={FILTERS}
+                    value={filter}
+                    onChange={setFilter}
+                  />
+                </div>
+              }
+            />
+            <Table
+              focusId="sales-invoices"
+              cols={cols}
+              rows={filtered}
+              onRowClick={setViewInvoice}
+              emptyMsg="No invoices match your search"
             />
           </Card>
         </>
@@ -210,10 +219,10 @@ export default function SalesPage() {
         >
           {/* Invoice summary */}
           <div style={{
-            background:   'var(--surface-2)',
-            border:       '1px solid var(--border)',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
             borderRadius: 'var(--r-sm)',
-            padding:      '12px 14px',
+            padding: '12px 14px',
           }}>
             <div style={{ fontSize: 12, color: 'var(--ink-40)', marginBottom: 3 }}>
               {payModal.id} — {payModal.party}

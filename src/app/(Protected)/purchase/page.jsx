@@ -1,18 +1,18 @@
 "use client"
 import React, { useRef, useState } from 'react'
-import { useApp }      from '@/context/AppContext.jsx'
-import { useToast }    from '@/context/ToastContext.jsx'
+import { useApp } from '@/context/AppContext.jsx'
+import { useToast } from '@/context/ToastContext.jsx'
 import { fmt, fmtShort, todayISO } from '@/utils/helpers.js'
 import useHydration from '@/hooks/useHydration.js'
 import {
   KpiCard, PageHeader, Card, CardHead,
 } from '@/components/frontendUi/index.js'
-import { Avatar, Badge }    from '@/components/frontendUi/index.js'
+import { Avatar, Badge } from '@/components/frontendUi/index.js'
 import { SearchInput, FilterPills } from '@/components/frontendUi/index.js'
 import { Input, Select, FormGrid, Textarea } from '@/components/frontendUi/index.js'
-import Table       from '@/components/frontendUi/Table.jsx'
-import Modal       from '@/components/frontendUi/Modal.jsx'
-import Button      from '@/components/frontendUi/Button.jsx'
+import Table from '@/components/frontendUi/Table.jsx'
+import Modal from '@/components/frontendUi/Modal.jsx'
+import Button from '@/components/frontendUi/Button.jsx'
 import PurchaseInvoiceView from '@/components/layout/PurchaseInvoiceView.jsx'
 import useAutocomplete from '@/hooks/useAutocomplete.js'
 import useKeyboard from '@/hooks/useKeyboard.js'
@@ -74,7 +74,7 @@ export default function PurchasePage({ onNewPurchase }) {
     }
 
     addPurchase({
-      id: form.billNo || `PO-${Date.now()}`,
+      id: form.billNo,
       supplier: form.supplier,
       date: form.date,
       dueDate: form.dueDate,
@@ -118,7 +118,7 @@ export default function PurchasePage({ onNewPurchase }) {
   const totalPaid = purchases.filter((purchase) => purchase.status === 'Paid').reduce((sum, purchase) => sum + purchase.amount, 0)
 
   const cols = [
-    { key: 'id', label: 'Bill No', mono: true },
+    { key: 'billNo', label: 'Bill No', mono: true },
     {
       key: 'supplier',
       label: 'Supplier',
@@ -156,8 +156,8 @@ export default function PurchasePage({ onNewPurchase }) {
             sub="Keyboard-first purchase entry aligned with the invoice workflow."
             right={(
               <>
-              <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
-              <Button variant="primary" onClick={() => router.push('/newPurchase')}>+ New Purchase</Button>
+                <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
+                <Button variant="primary" onClick={() => router.push('/newPurchase')}>+ New Purchase</Button>
               </>
             )}
           />

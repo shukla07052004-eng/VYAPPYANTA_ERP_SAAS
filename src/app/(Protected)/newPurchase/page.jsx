@@ -30,7 +30,7 @@ const emptyItem = () => ({
 
 export default function NewPurchasePage() {
   const router = useRouter()
-  const { addPurchase, parties, touchRecentItem } = useApp()
+  const { parties, touchRecentItem } = useApp()
   const toast = useToast()
   const [form, setForm] = useState(() => initialForm())
   const [items, setItems] = useState([emptyItem()])
@@ -120,19 +120,21 @@ export default function NewPurchasePage() {
   }
 
   const applySupplier = (party) => {
-    if (!party || typeof party !== 'object') return
-    const billing = party.billingAddress || {}
-    setForm((current) => ({
-      ...current,
-      supplier: party.name || party.companyName || '',
-      phone: party.phone || '',
-      city: party.city || billing.city || '',
-      gstin: party.gstin || party.taxId || '',
-      contactPerson: party.contactPerson || party.primaryContactName || '',
-      billingAddress: billing.addressLine1 || party.billingAddressLine1 || current.billingAddress,
-    }))
-    setOpen(false)
-  }
+  if (!party || typeof party !== 'object') return
+
+  setForm((current) => ({
+    ...current,
+    supplier:party.name ||party.companyName ||'',
+    supplierId: party.id || '',
+    phone:party.phone ||'',
+    city:party.address?.city ||'',
+    gstin:party.gstin ||'',
+    contactPerson:party.primaryContactName ||'',
+    billingAddress:party.address?.addressLine1 ||'',
+  }))
+
+  setOpen(false)
+}
 
   const focusHeaderField = useCallback((index) => {
     const node = headerFocusRefs.current[index]
@@ -186,12 +188,12 @@ export default function NewPurchasePage() {
     setItems((current) => current.map((row, index) => (
       index === rowIndex
         ? {
-            ...row,
-            desc: item.name,
-            hsn: item.hsn || row.hsn,
-            rate: item.lastRate ? String(item.lastRate) : row.rate,
-            taxPct: item.gstSlab ?? row.taxPct,
-          }
+          ...row,
+          desc: item.name,
+          hsn: item.hsn || row.hsn,
+          rate: item.lastRate ? String(item.lastRate) : row.rate,
+          taxPct: item.gstSlab ?? row.taxPct,
+        }
         : row
     )))
   }, [])
@@ -257,54 +259,94 @@ export default function NewPurchasePage() {
     }
   }, [advanceFromTaxField])
 
-  const savePurchase = useCallback(() => {
+  const savePurchase = useCallback(async () => {
     const nextErrors = {}
     if (!form.supplier.trim()) nextErrors.supplier = 'Supplier name is required'
     if (!computedItems.some((item) => item.desc.trim())) nextErrors.items = 'Add at least one line item'
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) return false
 
-    addPurchase({
-      id: form.billNo.trim() || `PO-${Date.now()}`,
-      supplier: form.supplier.trim(),
-      billNo: form.billNo.trim(),
-      purchaseType: form.purchaseType,
-      phone: form.phone,
-      city: form.city,
-      gstin: form.gstin,
-      contactPerson: form.contactPerson,
-      billingAddress: form.billingAddress,
-      date: form.date,
-      dueDate: form.dueDate,
-      transport,
-      items: computedItems
-        .filter((item) => item.desc.trim())
-        .map((item) => ({
-          desc: item.desc,
-          hsn: item.hsn,
-          qty: item.qty,
-          rate: item.rate,
-          discountPct: item.discountPct,
-          taxPct: item.taxPct,
-          taxLabel: `GST ${item.taxPct}%`,
-          baseAmount: item.baseAmount,
-          taxAmount: item.taxAmount,
-          amount: item.lineTotal,
-        })),
-      subtotal,
-      tax,
-      taxBreakdown,
-      amount: total,
-      paid: 0,
-      mode: transport.dispatchThrough,
-      status: 'Unpaid',
-      notes: form.notes,
-    })
+    try {
+      const payload = {
+        customer: {
+          Party: form.supplier.trim(),
+          partyId: form.supplierId,
+          phone: form.phone,
+          city: form.city,
+          gstin: form.gstin,
+          contactPerson: form.contactPerson,
+          billingAddress: form.billingAddress,
+        },
 
-    toast(`Purchase ${form.billNo.trim() || 'bill'} recorded for ${form.supplier}`, 'success')
-    router.push('/purchase')
-    return true
-  }, [addPurchase, computedItems, form, subtotal, tax, taxBreakdown, toast, total, transport])
+        billNo: form.billNo.trim(),
+        purchaseType: form.purchaseType,
+        date: form.date,
+        dueDate: form.dueDate,
+
+        items: computedItems
+          .filter((item) => item.desc.trim())
+          .map((item) => ({
+            desc: item.desc,
+            hsn: item.hsn,
+            qty: item.qty,
+            rate: item.rate,
+            discountPct: item.discountPct,
+            taxPct: item.taxPct,
+            taxLabel: `GST ${item.taxPct}%`,
+            baseAmount: item.baseAmount,
+            taxAmount: item.taxAmount,
+            amount: item.lineTotal,
+          })),
+
+        // 👇 THESE ARE BEING SENT
+        subtotal,
+        tax,
+        taxBreakdown,
+
+        amount: total,
+        paid: 0,
+        mode: transport.dispatchThrough,
+        status: 'Unpaid',
+        notes: form.notes,
+      }
+      console.log("SENDING Purchase INVOICE:", payload)
+
+      const response = await fetch("/api/newPurchase", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await response.json()
+
+      console.log("Invoice API status:", response.status)
+      console.log("Invoice API response:", result)
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to create invoice"
+        )
+      }
+
+      const purchase = result.data
+
+      toast(`Purchase ${purchase.billNo.trim() || 'bill'} recorded for ${purchase.supplier}`, 'success')
+      router.push('/purchase')
+      return true
+
+    } catch (error) {
+      console.error("Purchase Invoice creation failed:", error)
+
+      toast(
+        error.message || "Failed to create Purchase invoice",
+        "error"
+      )
+
+      return false
+    }
+  }, [computedItems, form, subtotal, tax, taxBreakdown, toast, total, transport])
 
   useKeyboard({
     bindings: [{ id: 'saveRecord', allowInEditable: true, handler: savePurchase }],
@@ -526,7 +568,12 @@ export default function NewPurchasePage() {
                         data-active={highlightedIndex === index ? 'true' : 'false'}
                       >
                         <div>{party.name}</div>
-                        <div>{party.city || party.billingAddress?.city || 'No city'} | {party.phone || 'No phone'}</div>
+
+                        <div>
+                          {party.address?.city || 'No city'}
+                          {' | '}
+                          {party.phone || 'No phone'}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -635,7 +682,7 @@ export default function NewPurchasePage() {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].qty = node
                             }}
-                   
+
                             min="0"
                             value={currentRow.qty}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -653,7 +700,7 @@ export default function NewPurchasePage() {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].rate = node
                             }}
-                      
+
                             min="0"
                             value={currentRow.rate}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -671,7 +718,7 @@ export default function NewPurchasePage() {
                               rowRefs.current[index] = rowRefs.current[index] ?? {}
                               rowRefs.current[index].discountPct = node
                             }}
-                     
+
                             min="0"
                             value={currentRow.discountPct}
                             className="erp-grid-input erp-grid-input--mono erp-grid-input--right"
@@ -818,6 +865,7 @@ function initialForm() {
   const date = todayISO()
   return {
     purchaseType: 'Purchase Bill',
+    supplierId: '',
     supplier: '',
     billNo: '',
     contactPerson: '',

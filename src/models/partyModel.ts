@@ -24,10 +24,12 @@ interface ILocation {
     longitude: number
 }
 export interface Party extends Document {
+    sr: number;
     partyType: string;
     accountGroup: string;
     companyName: string;
     partyCode: string;
+    gstin: string;
     taxID: string;
     primaryContactName: string;
     primaryContactRole: string;
@@ -44,11 +46,17 @@ export interface Party extends Document {
     status: string;
     remarks: IRemarks;
     location: ILocation;
+    balance:number;
+    drCr: string;
 
 }
 
 const PartySchema = new Schema(
   {
+    sr:{
+      type:String,
+      required: true
+    },
     partyType: {
       type: String,
       required: true,
@@ -84,6 +92,12 @@ const PartySchema = new Schema(
       required: true,
       trim: true,
       uppercase: true
+    },
+
+    gstin:{
+      type: String,
+      required:true,
+      trim:true,
     },
 
     taxID: {
@@ -211,6 +225,12 @@ const PartySchema = new Schema(
     location: {
       latitude: Number,
       longitude: Number
+    },
+    balance:{
+      type: Number,
+    },
+    drCr: {
+      type:String
     }
   },
   {

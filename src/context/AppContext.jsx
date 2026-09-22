@@ -9,6 +9,8 @@ import {
   saveErpState,
   getDefaultErpState,
   INIT_INVOICES,
+  INIT_PURCHASES,
+  INIT_PARTIES
 } from '../data/store.js'
 import {
   buildNormalizedErpData,
@@ -276,51 +278,48 @@ export function AppProvider({ children }) {
   const [bankAccounts, setBankAccounts] = useState(SAMPLE_BANK_ACCOUNTS)
   const [cashTransactions] = useState(SAMPLE_CASH_TRANSACTIONS)
   const [backupSettings, setBackupSettings] = useState(SAMPLE_BACKUP_SETTINGS)
-    const [items, setItems] = useState(() => {
-      if (initialErpState.items?.length) return initialErpState.items
-      return buildInitialItemMaster({ sales: initialErpState.invoices, purchases: initialErpState.purchases })
-    })
+  const [items, setItems] = useState(() => {
+    if (initialErpState.items?.length) return initialErpState.items
+    return buildInitialItemMaster({ sales: initialErpState.invoices, purchases: initialErpState.purchases })
+  })
 
 
-  useEffect(() => {
-    const loadPartiesFromMongoDB = async () => {
-      try {
-        const response = await fetch('/api/newParty')
+useEffect(() => {
+  const loadParties = async () => {
+    try {
+      const parties = await INIT_PARTIES();
 
-        const result = await response.json()
+      console.log("Normalized parties:", parties);
 
-        if (!response.ok || !result.success) {
-          throw new Error(
-            result.message || 'Failed to fetch parties'
-          )
-        }
-
-        console.log('MongoDB parties:', result.data)
-
-        setParties(result.data || [])
-      } catch (error) {
-        console.error(
-          'Failed to load parties from MongoDB:',
-          error
-        )
-      }
+      setParties(parties);
+    } catch (error) {
+      console.error(
+        "Failed to load parties:",
+        error
+      );
     }
+  };
 
-    loadPartiesFromMongoDB()
-  }, [])
+  loadParties();
+}, []);
 
   useEffect(() => {
     let cancelled = false
 
     async function refreshFromDatabase() {
       try {
-        const freshInvoices = await INIT_INVOICES()
+        const [freshInvoices, freshPurchases] = await Promise.all([
+          INIT_INVOICES(),
+          INIT_PURCHASES(),
+        ])
 
         if (cancelled) return
 
         setInvoices(freshInvoices)
+        setPurchases(freshPurchases)
+
       } catch (error) {
-        console.error("Invoice refresh failed:", error)
+        console.error("ERP database refresh failed:", error)
       }
     }
 
@@ -460,7 +459,7 @@ export function AppProvider({ children }) {
       throw new Error(result.message || "Failed to record payment")
     }
 
-    const updatedInvoice = normalizeInvoice(result.data)
+    const updatedInvoice = result.data
 
     setInvoices((prev) =>
       prev.map((invoice) =>
@@ -499,6 +498,7 @@ export function AppProvider({ children }) {
     return true
   }, [])
 
+
   const addParty = useCallback((party) => {
     setParties((prev) => [party, ...prev])
   }, [])
@@ -512,13 +512,6 @@ export function AppProvider({ children }) {
       )
     )
   }, [])
-
-  const addPurchase = useCallback((purchase) => {
-    const nextPurchase = createPurchaseRecord(purchase)
-    setPurchases((prev) => [nextPurchase, ...prev])
-    touchItemsFromDocument(nextPurchase.items, nextPurchase.date)
-  }, [touchItemsFromDocument])
-
   const getPartyPurchases = useCallback((supplierName) =>
     purchases.filter((purchase) => purchase.supplier?.toLowerCase() === supplierName?.toLowerCase())
     , [purchases])
@@ -541,6 +534,12 @@ export function AppProvider({ children }) {
       worker.id === workerId ? { ...worker, paid: true } : worker
     )))
   }, [])
+
+  const addPurchase = useCallback((purchase) => {
+    const nextPurchase = createPurchaseRecord(purchase)
+    setPurchases((prev) => [nextPurchase, ...prev])
+    touchItemsFromDocument(nextPurchase.items, nextPurchase.date)
+  }, [touchItemsFromDocument])
 
   const recordAdvance = useCallback((workerId, amount) => {
     setWorkers((prev) => prev.map((worker) => (
@@ -878,13 +877,13 @@ export function AppProvider({ children }) {
       addParty,
       updateParty,
       deleteParty,
-      addPurchase,
       getPartyPurchases,
       addExpense,
       addWorker,
       paySalary,
       recordAdvance,
       addCompany,
+      addPurchase,
       saveBackupSettings,
       upsertLoan,
       deleteLoan,

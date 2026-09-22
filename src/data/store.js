@@ -2,6 +2,239 @@
 // BizLedger Pro — Central Data Store
 // ============================================================
 
+
+export function normalizeInvoice(invoice) {
+  if (!invoice) return null
+  return {
+    ...invoice,
+    id: String(invoice._id ?? invoice.id),
+    invoiceNumber: invoice.invoiceNumber ?? "",
+    invoiceType: invoice.invoiceType ?? "Tax Invoice",
+    partyId: invoice.partyId
+      ? String(invoice.partyId)
+      : "",
+    partySnapshot: invoice.partySnapshot ?? {},
+    party: invoice.partySnapshot?.name ?? "",
+    phone: invoice.partySnapshot?.phone ?? "",
+    city: invoice.partySnapshot?.city ?? "",
+    gstin: invoice.partySnapshot?.gstin ?? "",
+    date: invoice.invoiceDate ?? invoice.createdAt,
+    items: (invoice.items ?? []).map((item) => ({
+      ...item,
+      itemId: item.itemId
+        ? String(item.itemId)
+        : "",
+      desc: item.desc ?? "",
+      hsn: item.hsn ?? "",
+      qty: Number(item.qty ?? 0),
+      rate: Number(item.rate ?? 0),
+      discountPct: Number(item.discountPct ?? 0),
+      taxPct: Number(item.taxPct ?? 0),
+      baseAmount: Number(item.baseAmount ?? 0),
+      taxAmount: Number(item.taxAmount ?? 0),
+      amount: Number(item.amount ?? 0),
+    })),
+    subtotal: Number(invoice.subtotal ?? 0),
+    tax: Number(invoice.tax ?? 0),
+    total: Number(invoice.total ?? 0),
+    paid: Number(invoice.paid ?? 0),
+    status: invoice.status ?? "Pending",
+    notes: invoice.notes ?? "",
+  }
+}
+
+export function normalizePurchase(purchase) {
+  if (!purchase) return null
+
+  return {
+    ...purchase,
+
+    // MongoDB ID
+    id: String(purchase._id ?? purchase.id),
+
+    // Purchase identification
+    billNo: purchase.billNo ?? "",
+    purchaseType: purchase.purchaseType ?? "Purchase Bill",
+
+    // Supplier / Customer
+    customer: purchase.customer ?? {},
+
+    supplier: purchase.customer?.Party ?? "",
+    phone: purchase.customer?.phone ?? "",
+    city: purchase.customer?.city ?? "",
+    gstin: purchase.customer?.gstin ?? "",
+    contactPerson: purchase.customer?.contactPerson ?? "",
+    billingAddress: purchase.customer?.billingAddress ?? "",
+
+    // Dates
+    date: purchase.date ?? purchase.createdAt ?? "",
+    dueDate: purchase.dueDate ?? null,
+
+    // Items
+    items: (purchase.items ?? []).map((item) => ({
+      ...item,
+
+      desc: item.desc ?? "",
+      hsn: item.hsn ?? "",
+
+      qty: Number(item.qty ?? 0),
+      rate: Number(item.rate ?? 0),
+      discountPct: Number(item.discountPct ?? 0),
+      taxPct: Number(item.taxPct ?? 0),
+
+      taxLabel: item.taxLabel ?? "",
+
+      baseAmount: Number(item.baseAmount ?? 0),
+      taxAmount: Number(item.taxAmount ?? 0),
+      amount: Number(item.amount ?? 0),
+    })),
+
+    // Totals
+    subtotal: Number(purchase.subtotal ?? 0),
+    tax: Number(purchase.tax ?? 0),
+
+    taxBreakdown: (purchase.taxBreakdown ?? []).map((row) => ({
+      rate: Number(row.rate ?? 0),
+      taxable: Number(row.taxable ?? 0),
+    })),
+
+    amount: Number(purchase.amount ?? 0),
+    paid: Number(purchase.paid ?? 0),
+
+    // Payment
+    mode: purchase.mode ?? "Credit",
+
+    // Payment status
+    status: purchase.status ?? "Unpaid",
+
+    // Notes
+    notes: purchase.notes ?? "",
+
+    // Mongo timestamps
+    createdAt: purchase.createdAt ?? null,
+    updatedAt: purchase.updatedAt ?? null,
+  }
+}
+
+export function normalizeParty(party, index = 0) {
+  if (!party) return null;
+
+  return {
+    // =========================
+    // Serial Number
+    // =========================
+    sr: index + 1,
+
+    // =========================
+    // MongoDB ID
+    // =========================
+    id:
+      party._id?.toString?.() ??
+      party._id ??
+      party.id ??
+      "",
+
+    // =========================
+    // Basic Party Information
+    // =========================
+    name: party.companyName ?? "",
+    companyName: party.companyName ?? "",
+    type: party.partyType ?? "Customer",
+    accountGroup: party.accountGroup ?? "",
+    partyCode: party.partyCode ?? "",
+
+    // =========================
+    // Tax Information
+    // =========================
+    gstin: party.gstin ?? "",
+    taxID: party.taxID ?? "",
+
+    // =========================
+    // Contact Information
+    // =========================
+    primaryContactName: party.primaryContactName ?? "",
+    primaryContactRole: party.primaryContactRole ?? "",
+    phone: party.phone ?? "",
+    email: party.email ?? "",
+
+    // =========================
+    // Address
+    // =========================
+    address: {
+      addressLine1: party.address?.addressLine1 ?? "",
+      city: party.address?.city ?? "",
+      state: party.address?.state ?? "",
+      postalCode: party.address?.postalCode ?? "",
+      country: party.address?.country ?? "",
+    },
+
+    // =========================
+    // Payment
+    // =========================
+    paymentTerm: party.paymentTerm ?? "",
+    creditLimit: Number(party.creditLimit ?? 0),
+    currency: party.currency ?? "INR",
+    discountStructure: party.discountStructure ?? "",
+
+    // =========================
+    // Bank
+    // =========================
+    bank: {
+      bankName: party.bank?.bankName ?? "",
+      ifsc: party.bank?.ifsc ?? "",
+      accountNo: party.bank?.accountNo ?? "",
+    },
+
+    // =========================
+    // Partner / Shipping
+    // =========================
+    partnerRoles: Array.isArray(party.partnerRoles)
+      ? party.partnerRoles
+      : [],
+
+    shippingMethods: Array.isArray(party.shippingMethods)
+      ? party.shippingMethods
+      : [],
+
+    // =========================
+    // Status
+    // =========================
+    status: party.status ?? "Active",
+
+    // =========================
+    // Remarks
+    // =========================
+    remarks: {
+      notes: party.remarks?.notes ?? "",
+      openingBalance: Number(
+        party.remarks?.openingBalance ?? 0
+      ),
+      carrierInfo: party.remarks?.carrierInfo ?? "",
+      supplierDetails: party.remarks?.supplierDetails ?? "",
+    },
+
+    // =========================
+    // Location
+    // =========================
+    location: {
+      latitude: Number(party.location?.latitude ?? 0),
+      longitude: Number(party.location?.longitude ?? 0),
+    },
+
+    // =========================
+    // Ledger
+    // =========================
+    balance: Number(party.balance ?? 0),
+    drCr: party.drCr ?? "Dr",
+
+    // =========================
+    // Timestamps
+    // =========================
+    createdAt: party.createdAt ?? null,
+    updatedAt: party.updatedAt ?? null,
+  };
+}
+
 export const BUSINESS = {
   name: 'Ram Kishore & Sons',
   gstin: '09ABCDE1234F1Z5',
@@ -129,44 +362,141 @@ export async function INIT_INVOICES() {
     notes: normalizeInvoice.notes ?? "",
   }));
 }
-export const INIT_PARTIES = [
-  { id: 1, name: 'Sharma Traders', type: 'Customer', phone: '9876543210', city: 'Kanpur', gstin: '09SHTRD1234F1Z5', balance: 48200, drCr: 'DR' },
-  { id: 2, name: 'Gupta & Sons', type: 'Customer', phone: '9988776655', city: 'Lucknow', gstin: '09GUPTA5678G2Z6', balance: 22500, drCr: 'DR' },
-  { id: 3, name: 'Mehta Wholesale', type: 'Both', phone: '9123456789', city: 'Agra', gstin: '09MEHTA9012H3Z7', balance: 0, drCr: '' },
-  { id: 4, name: 'National Distributors', type: 'Supplier', phone: '9012345678', city: 'Delhi', gstin: '07NATDST3456I4Z8', balance: 84500, drCr: 'CR' },
-  { id: 5, name: 'Patel Distributors', type: 'Customer', phone: '9871234567', city: 'Varanasi', gstin: '09PATDST7890J5Z9', balance: 14400, drCr: 'DR' },
-  { id: 6, name: 'Joshi Brothers', type: 'Customer', phone: '9654321098', city: 'Allahabad', gstin: '09JOSHBR2345K6Z1', balance: 0, drCr: '' },
-  { id: 7, name: 'Singh Emporium', type: 'Customer', phone: '9543210987', city: 'Prayagraj', gstin: '09SNGEM6789L7Z2', balance: 9800, drCr: 'DR' },
-  { id: 8, name: 'Meridian Supplies', type: 'Supplier', phone: '9432123456', city: 'Mumbai', gstin: '27MRSUP1234M8Z3', balance: 8400, drCr: 'CR' },
-]
+export async function INIT_PARTIES() {
+  const response = await fetch("/api/newParty", {
+    method: "GET",
+    cache: "no-store",
+  });
 
-export const INIT_PURCHASES = [
-  {
-    id: 'PO-225', supplier: 'Meridian Supplies', date: '08 Apr 2025', status: 'Unpaid', amount: 8400,
-    items: [{ desc: 'Electronic Components (Lot)', qty: 4, rate: 1500, amount: 6000 }, { desc: 'Shipping & Handling', qty: 1, rate: 2400, amount: 2400 }],
-    subtotal: 8400, tax: 0, notes: 'Delivery pending.',
-  },
-  {
-    id: 'PO-312', supplier: 'National Distributors', date: '12 Apr 2025', status: 'Partial', amount: 9200,
-    items: [{ desc: 'Wholesale Goods Batch-A', qty: 8, rate: 1000, amount: 8000 }, { desc: 'Freight Charges', qty: 1, rate: 1200, amount: 1200 }],
-    subtotal: 9200, tax: 0, notes: 'Partial payment ₹5,000 received.', paid: 5000,
-  },
-  {
-    id: 'PO-C078', supplier: 'Harbor Electronics', date: '18 Apr 2025', status: 'Unpaid', amount: 6800,
-    items: [{ desc: 'Circuit Boards (x20)', qty: 20, rate: 320, amount: 6400 }, { desc: 'Packaging', qty: 1, rate: 400, amount: 400 }],
-    subtotal: 6800, tax: 0, notes: '',
-  },
-  {
-    id: 'PO-189', supplier: 'City Wholesalers', date: '20 Mar 2025', status: 'Paid', amount: 62000,
-    items: [{ desc: 'Mixed Wholesale Items', qty: 40, rate: 1500, amount: 60000 }, { desc: 'Insurance', qty: 1, rate: 2000, amount: 2000 }],
-    subtotal: 62000, tax: 0, notes: 'Full payment done via NEFT.', paid: 62000,
-  },
-  {
-    id: 'PO-176', supplier: 'National Distributors', date: '15 Mar 2025', status: 'Paid', amount: 84500,
-    items: [{ desc: 'Bulk Supply Lot-7', qty: 50, rate: 1650, amount: 82500 }, { desc: 'Handling Fee', qty: 1, rate: 2000, amount: 2000 }],
-    subtotal: 84500, tax: 0, notes: '', paid: 84500,
-  },
-]
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.message || "Failed to fetch parties"
+    );
+  }
+
+  return (result.data ?? []).map((party, index) =>
+    normalizeParty(party, index)
+  );
+}
+export async function INIT_PURCHASES() {
+  const response = await fetch('/api/newPurchase',
+    {
+      method: 'GET',
+      cache: "no-store",
+    }
+  )
+
+  const result = await response.json()
+
+  if (!result.success || !response.ok) {
+    throw new Error(result.message || "Failed to fetch Purchase");
+  }
+
+  return (result.data ?? []).map((normalizePurchase) => ({
+    // =========================
+    // IDs
+    // =========================
+    id:
+      normalizePurchase._id?.toString?.() ??
+      normalizePurchase.id ??
+      "",
+
+    // =========================
+    // Purchase / Bill
+    // =========================
+    billNo: normalizePurchase.billNo ?? "",
+
+    purchaseType: normalizePurchase.purchaseType ?? "Purchase Bill",
+
+    // =========================
+    // Supplier
+    // =========================
+    customer: {
+      Party: normalizePurchase.customer?.Party ?? "",
+      phone: normalizePurchase.customer?.phone ?? "",
+      city: normalizePurchase.customer?.city ?? "",
+      gstin: normalizePurchase.customer?.gstin ?? "",
+      contactPerson: normalizePurchase.customer?.contactPerson ?? "",
+      billingAddress: normalizePurchase.customer?.billingAddress ?? "",
+    },
+
+    // Keep convenient flat fields
+    // for existing frontend usage
+    supplier: normalizePurchase.customer?.Party ?? "",
+    phone: normalizePurchase.customer?.phone ?? "",
+    city: normalizePurchase.customer?.city ?? "",
+    gstin: normalizePurchase.customer?.gstin ?? "",
+    contactPerson: normalizePurchase.customer?.contactPerson ?? "",
+    billingAddress: normalizePurchase.customer?.billingAddress ?? "",
+
+    // =========================
+    // Dates
+    // =========================
+    date: normalizePurchase.date ?? "",
+    dueDate: normalizePurchase.dueDate ?? "",
+
+    // =========================
+    // Items
+    // =========================
+    items: (normalizePurchase.items ?? []).map((item) => ({
+      id:
+        item._id?.toString?.() ??
+        item._id ??
+        "",
+
+      desc: item.desc ?? "",
+      hsn: item.hsn ?? "",
+
+      qty: Number(item.qty ?? 0),
+      rate: Number(item.rate ?? 0),
+
+      discountPct: Number(item.discountPct ?? 0),
+      taxPct: Number(item.taxPct ?? 0),
+
+      taxLabel: item.taxLabel ?? "",
+
+      baseAmount: Number(item.baseAmount ?? 0),
+      taxAmount: Number(item.taxAmount ?? 0),
+      amount: Number(item.amount ?? 0),
+    })),
+
+    // =========================
+    // Totals
+    // =========================
+    subtotal: Number(normalizePurchase.subtotal ?? 0),
+
+    tax: Number(normalizePurchase.tax ?? 0),
+
+    taxBreakdown: (normalizePurchase.taxBreakdown ?? []).map((row) => ({
+      rate: Number(row.rate ?? 0),
+      taxable: Number(row.taxable ?? 0),
+    })),
+
+    amount: Number(normalizePurchase.amount ?? 0),
+
+    paid: Number(normalizePurchase.paid ?? 0),
+
+    // =========================
+    // Payment / Status
+    // =========================
+    mode: normalizePurchase.mode ?? "Credit",
+
+    status: normalizePurchase.status ?? "Unpaid",
+
+    // =========================
+    // Other
+    // =========================
+    notes: normalizePurchase.notes ?? "",
+
+    // =========================
+    // Timestamps
+    // =========================
+    createdAt: normalizePurchase.createdAt ?? null,
+    updatedAt: normalizePurchase.updatedAt ?? null,
+  }));
+}
 
 export const INIT_EXPENSES = [
   { id: 1, category: 'Rent', desc: 'Shop rent – April 2025', amount: 15000, date: '01 Apr 2025', mode: 'Bank' },
@@ -221,8 +551,8 @@ export function getDefaultErpState() {
 
     invoices: [],
 
-    parties: structuredCloneSafe(INIT_PARTIES),
-    purchases: structuredCloneSafe(INIT_PURCHASES),
+    parties: [],
+    purchases: [],
     expenses: structuredCloneSafe(INIT_EXPENSES),
     workers: structuredCloneSafe(INIT_WORKERS),
 
@@ -277,7 +607,7 @@ export function loadErpState() {
   }
 }
 // ************************************************************************This function is going to replace loadErpState()************************************************************************************
-export async function initializeErpData() {
+export async function initializeErpInvoiceData() {
   try {
     const invoices = await INIT_INVOICES();
 
@@ -297,7 +627,44 @@ export async function initializeErpData() {
     throw error;
   }
 }
+export async function initializeErpPurchaseData() {
+  try {
+    const purchases = await INIT_PURCHASES();
 
+    const cached = loadErpState();
+
+    const state = {
+      ...cached,
+      purchases,
+    };
+
+    saveErpState(state);
+
+    return state;
+  } catch (error) {
+    console.error("Failed to initialize ERP purchases:", error);
+    throw error;
+  }
+}
+export async function initializeErpPartiesData() {
+  try {
+    const parties = await INIT_PARTIES();
+
+    const cached = loadErpState();
+
+    const state = {
+      ...cached,
+      parties,
+    };
+
+    saveErpState(state);
+
+    return state;
+  } catch (error) {
+    console.error("Failed to initialize ERP parties:", error);
+    throw error;
+  }
+}
 export function saveErpState(state) {
   if (typeof window === 'undefined' || !state) return false
   try {
@@ -323,60 +690,3 @@ export async function applyImportPayloadToStore(payload, meta = {}) {
   return { state: persistable, stats: _importStats }
 }
 
-
-export function normalizeInvoice(invoice) {
-  if (!invoice) return null
-
-  return {
-    ...invoice,
-
-    id: String(invoice._id ?? invoice.id),
-
-    invoiceNumber: invoice.invoiceNumber ?? "",
-
-    invoiceType: invoice.invoiceType ?? "Tax Invoice",
-
-    partyId: invoice.partyId
-      ? String(invoice.partyId)
-      : "",
-
-    partySnapshot: invoice.partySnapshot ?? {},
-
-    party: invoice.partySnapshot?.name ?? "",
-    phone: invoice.partySnapshot?.phone ?? "",
-    city: invoice.partySnapshot?.city ?? "",
-    gstin: invoice.partySnapshot?.gstin ?? "",
-
-    date: invoice.invoiceDate ?? invoice.createdAt,
-
-    items: (invoice.items ?? []).map((item) => ({
-      ...item,
-
-      itemId: item.itemId
-        ? String(item.itemId)
-        : "",
-
-      desc: item.desc ?? "",
-      hsn: item.hsn ?? "",
-
-      qty: Number(item.qty ?? 0),
-      rate: Number(item.rate ?? 0),
-
-      discountPct: Number(item.discountPct ?? 0),
-      taxPct: Number(item.taxPct ?? 0),
-
-      baseAmount: Number(item.baseAmount ?? 0),
-      taxAmount: Number(item.taxAmount ?? 0),
-      amount: Number(item.amount ?? 0),
-    })),
-
-    subtotal: Number(invoice.subtotal ?? 0),
-    tax: Number(invoice.tax ?? 0),
-    total: Number(invoice.total ?? 0),
-    paid: Number(invoice.paid ?? 0),
-
-    status: invoice.status ?? "Pending",
-
-    notes: invoice.notes ?? "",
-  }
-}
