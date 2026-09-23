@@ -727,7 +727,7 @@ export default function NewInvoicePage() {
                   <div className="erp-dropdown">
                     {suggestions.map((party, index) => (
                       <button
-                        key={party._id}
+                        key={party.id}
                         ref={(node) => {
                           partyOptionRefs.current[index] = node
                         }}

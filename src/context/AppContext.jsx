@@ -284,24 +284,24 @@ export function AppProvider({ children }) {
   })
 
 
-useEffect(() => {
-  const loadParties = async () => {
-    try {
-      const parties = await INIT_PARTIES();
+  useEffect(() => {
+    const loadParties = async () => {
+      try {
+        const parties = await INIT_PARTIES();
 
-      console.log("Normalized parties:", parties);
+        console.log("Normalized parties:", parties);
 
-      setParties(parties);
-    } catch (error) {
-      console.error(
-        "Failed to load parties:",
-        error
-      );
-    }
-  };
+        setParties(parties);
+      } catch (error) {
+        console.error(
+          "Failed to load parties:",
+          error
+        );
+      }
+    };
 
-  loadParties();
-}, []);
+    loadParties();
+  }, []);
 
   useEffect(() => {
     let cancelled = false
@@ -330,13 +330,31 @@ useEffect(() => {
     }
   }, [])
 
-  const deleteParty = useCallback((partyId) => {
-    setParties((prev) =>
-      prev.filter(
-        (party) => String(party._id) !== String(partyId)
-      )
+  const deleteParty = useCallback(async (partyId) => {
+  const response = await fetch(
+    `/api/newParty?id=${encodeURIComponent(String(partyId))}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.message || "Failed to delete party"
+    );
+  }
+
+  setParties((prev) =>
+    prev.filter(
+      (party) =>
+        String(party._id ?? party.id) !== String(partyId)
     )
-  }, [])
+  );
+
+  return true;
+}, []);
 
   useEffect(() => {
     const loadItemsFromMongoDB = async () => {
@@ -470,6 +488,32 @@ useEffect(() => {
     )
 
     return updatedInvoice
+  }, [])
+
+  const deletePurchase = useCallback(async (purchaseId) => {
+    const response = await fetch(
+      `/api/newPurchase/${purchaseId}`,
+      {
+        method: 'DELETE',
+      }
+    )
+
+    const result = await response.json()
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || 'Failed to delete purchase'
+      )
+    }
+
+    setPurchases((prev) =>
+      prev.filter(
+        (purchase) =>
+          String(purchase.id) !== String(purchaseId)
+      )
+    )
+
+    return true
   }, [])
 
   const deleteInvoice = useCallback(async (invoiceId) => {
@@ -874,6 +918,7 @@ useEffect(() => {
       erpData,
       recordPayment,
       deleteInvoice,
+      deletePurchase,
       addParty,
       updateParty,
       deleteParty,

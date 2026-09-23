@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/context/ToastContext.jsx'
 import { useApp } from '@/context/AppContext.jsx'
 import { fmt, fmtShort } from '@/utils/helpers.js'
 import useHydration from '@/hooks/useHydration.js'
@@ -21,6 +22,7 @@ const PARTY_FILTERS = ['All', 'Customer', 'Supplier', 'Distributor', 'Carrier', 
 export default function PartiesPage() {
   const router = useRouter()
   const { parties, deleteParty } = useApp()
+    const toast = useToast()
   const mounted = useHydration()
   const searchRef = useRef(null)
   const [search, setSearch] = useState('')
@@ -70,163 +72,135 @@ export default function PartiesPage() {
       0
     )
 
-  const handleDeleteParty = async (partyId) => {
-    console.log('ID from row:', partyId)
+  return (
+    <div className="animate-slide">
+      <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="parties" />
 
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this party?'
-    )
+      {mounted && (
+        <>
+          <PageHeader
+            title="Parties"
+            sub="Keyboard-first party directory with full enterprise onboarding."
+            right={(
+              <>
+                <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
+                <Button variant="primary" onClick={() => router.push('/newParty')}>+ Add Party</Button>
+              </>
+            )}
+          />
 
-    if (!confirmed) return
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
+            <KpiCard label="Total Parties" value={parties.length} sub="Active accounts" />
+            <KpiCard label="Total Receivable" value={fmtShort(totalDR)} />
+            <KpiCard label="Total Payable" value={fmtShort(totalCR)} />
+          </div>
 
-    try {
-      const response = await fetch(
-        `/api/newParty?id=${encodeURIComponent(partyId)}`,
-        {
-          method: 'DELETE',
-        }
-      )
-
-      const result = await response.json()
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || 'Failed to delete party'
-        )
-      }
-
-      deleteParty(partyId)
-
-    } catch (error) {
-      console.error('Delete party error:', error)
-
-      window.alert(
-        error.message || 'Failed to delete party'
-      )
-    }
-  }
-
-    return (
-      <div className="animate-slide">
-        <ErpImportModal open={importOpen} onClose={() => setImportOpen(false)} defaultKind="parties" />
-
-        {mounted && (
-          <>
-            <PageHeader
-              title="Parties"
-              sub="Keyboard-first party directory with full enterprise onboarding."
+          <Card>
+            <CardHead
+              title="All Parties"
               right={(
-                <>
-                  <Button variant="ghost" onClick={() => setImportOpen(true)}>Import</Button>
-                  <Button variant="primary" onClick={() => router.push('/newParty')}>+ Add Party</Button>
-                </>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <SearchInput inputRef={searchRef} value={search} onChange={setSearch} placeholder="Search parties..." />
+                  <FilterPills options={PARTY_FILTERS} value={filter} onChange={setFilter} />
+                </div>
               )}
             />
+            <Table
+              focusId="parties-list"
+              cols={[
+                {
+                  key: 'companyName',
+                  label: 'Party Name',
+                },
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 22 }}>
-              <KpiCard label="Total Parties" value={parties.length} sub="Active accounts" />
-              <KpiCard label="Total Receivable" value={fmtShort(totalDR)} />
-              <KpiCard label="Total Payable" value={fmtShort(totalCR)} />
-            </div>
+                {
+                  key: 'partyType',
+                  label: 'Type',
+                },
 
-            <Card>
-              <CardHead
-                title="All Parties"
-                right={(
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <SearchInput inputRef={searchRef} value={search} onChange={setSearch} placeholder="Search parties..." />
-                    <FilterPills options={PARTY_FILTERS} value={filter} onChange={setFilter} />
-                  </div>
-                )}
-              />
-              <Table
-                focusId="parties-list"
-                cols={[
-                  {
-                    key: 'companyName',
-                    label: 'Party Name',
-                  },
+                {
+                  key: 'phone',
+                  label: 'Phone',
+                  mono: true,
+                  dim: true,
+                },
 
-                  {
-                    key: 'partyType',
-                    label: 'Type',
-                  },
+                {
+                  key: 'address',
+                  label: 'City',
+                  dim: true,
+                  render: (_, row) => row.address?.city || '-',
+                },
 
-                  {
-                    key: 'phone',
-                    label: 'Phone',
-                    mono: true,
-                    dim: true,
-                  },
-
-                  {
-                    key: 'address',
-                    label: 'City',
-                    dim: true,
-                    render: (_, row) => row.address?.city || '-',
-                  },
-
-                  {
-                    key: 'remarks',
-                    label: 'Balance',
-                    right: true,
-                    render: (_, row) => {
-                      const balance = Number(
-                        row.remarks?.openingBalance || 0
-                      )
-
-                      return balance
-                        ? fmt(Math.abs(balance))
-                        : '-'
-                    },
-                  },
-
-                  {
-                    key: '_edit',
-                    label: '',
-                    sortable: false,
-
-                    render: (_, row) => (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          tabIndex={-1}
-                          onClick={(event) => {
-                            event.stopPropagation()
-
-                            router.push(
-                              `/newParty?partyId=${encodeURIComponent(row._id)}`
-                            )
-                          }}
-                        >
-                          Edit
-                        </Button>
-
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          tabIndex={-1}
-                          onClick={(event) => {
-                            event.stopPropagation()
-
-                            handleDeleteParty(row._id)
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </div>
+                {
+                  key: 'remarks',
+                  label: 'Balance',
+                  right: true,
+                  render: (_, row) => {
+                    const balance = Number(
+                      row.remarks?.openingBalance || 0
                     )
 
+                    return balance
+                      ? fmt(Math.abs(balance))
+                      : '-'
                   },
-                ]}
-                rows={filteredParties}
-              />
+                },
 
-            </Card>
-          </>
-        )}
-      </div>
-    )
-  }
+                {
+                  key: '_edit',
+                  label: '',
+                  sortable: false,
+
+                  render: (_, row) => (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        tabIndex={-1}
+                        onClick={(event) => {
+                          event.stopPropagation()
+
+                          router.push(
+                            `/newParty?partyId=${encodeURIComponent(row._id)}`
+                          )
+                        }}
+                      >
+                        Edit
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        tabIndex={-1}
+                        onClick={async (event) => {
+                          event.stopPropagation();
+
+                          try {
+                            await deleteParty(row.id);
+                            toast("Party deleted successfully", "success");
+                          } catch (error) {
+                            toast(
+                              error.message || "Failed to delete party",
+                              "error"
+                            );
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  )
+
+                },
+              ]}
+              rows={filteredParties}
+            />
+
+          </Card>
+        </>
+      )}
+    </div>
+  )
+}
 

@@ -31,7 +31,7 @@ const CELL_INPUT = {
 
 export default function PurchasePage({ onNewPurchase }) {
   const router = useRouter();
-  const { purchases, addPurchase, parties } = useApp()
+  const { purchases, addPurchase,deletePurchase, parties } = useApp()
   const mounted = useHydration()
   const [importOpen, setImportOpen] = useState(false)
   const toast = useToast()
@@ -137,9 +137,29 @@ export default function PurchasePage({ onNewPurchase }) {
       label: '',
       sortable: false,
       render: (_, row) => (
-        <Button size="sm" variant="ghost" tabIndex={-1} onClick={(event) => { event.stopPropagation(); setViewPO(row) }}>
-          View
-        </Button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <Button size="sm" variant="ghost"tabIndex={-1}
+            onClick={(event) => {
+              event.stopPropagation()
+              setViewPO(row)
+            }}
+          >
+            View
+          </Button>
+          <Button size="sm" variant="secondary" tabIndex={-1}
+            onClick={async (event) => {
+              event.stopPropagation()
+              try {
+                await deletePurchase(row._id || row.id)
+                toast('Purchase deleted successfully', 'success')
+              } catch (error) {
+                toast(error.message || 'Failed to delete purchase', 'error')
+              }
+            }}
+          >
+            Delete
+          </Button>
+        </div>
       ),
     },
   ]

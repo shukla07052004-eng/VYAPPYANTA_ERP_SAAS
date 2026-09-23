@@ -47,7 +47,7 @@ export interface Purchase extends Document {
 const SupplierSchema = new Schema<ISupplier>(
     {
         Party: {
-            type: mongoose.Types.ObjectId,
+            type: String,
             required: true,
         },
 

@@ -25,7 +25,7 @@ const FILTERS = ['All', 'Paid', 'Partial', 'Pending']
 
 export default function SalesPage() {
   const router = useRouter()
-  const { invoices, recordPayment } = useApp()
+  const { invoices, recordPayment, deleteInvoice } = useApp()
   const toast = useToast()
   const mounted = useHydration()
 
@@ -67,7 +67,6 @@ export default function SalesPage() {
     setPayModal(null)
     setPayAmt('')
   }
-
   /* Table columns */
   const cols = [
     {
@@ -131,9 +130,16 @@ export default function SalesPage() {
           >
             View
           </Button>
+          <Button
+            size="sm" variant="secondary"
+            tabIndex={-1}
+            onClick={e => { e.stopPropagation(); deleteInvoice(row.id) }}
+          >
+            Delete
+          </Button>
           {row.status !== 'Paid' && (
             <Button
-              size="sm" variant="ghost"
+              size="sm" variant="primary"
               tabIndex={-1}
               onClick={e => { e.stopPropagation(); setPayModal(row); setPayAmt('') }}
             >
