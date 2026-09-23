@@ -34,13 +34,22 @@ export default function Modal({
         const focusable = dialogRef.current.querySelectorAll(
           'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         )
+
         if (!focusable.length) return
+
         const first = focusable[0]
         const last = focusable[focusable.length - 1]
-        if (event.shiftKey && document.activeElement === first) {
+
+        if (
+          event.shiftKey &&
+          document.activeElement === first
+        ) {
           event.preventDefault()
           last.focus()
-        } else if (!event.shiftKey && document.activeElement === last) {
+        } else if (
+          !event.shiftKey &&
+          document.activeElement === last
+        ) {
           event.preventDefault()
           first.focus()
         }
@@ -49,19 +58,26 @@ export default function Modal({
 
     document.addEventListener('keydown', handleKey, true)
     document.body.style.overflow = 'hidden'
+
     requestAnimationFrame(() => {
-      const firstFocusable = dialogRef.current?.querySelector('[data-autofocus="true"]')
-        || dialogRef.current?.querySelector(
-          'input, select, textarea, button:not([disabled]):not([data-modal-close="true"]), [tabindex]:not([tabindex="-1"])',
+      const firstFocusable =
+        dialogRef.current?.querySelector(
+          '[data-autofocus="true"]'
+        ) ||
+        dialogRef.current?.querySelector(
+          'input, select, textarea, button:not([disabled]):not([data-modal-close="true"]), [tabindex]:not([tabindex="-1"])'
         )
-      firstFocusable?.focus?.({ preventScroll: true })
+
+      firstFocusable?.focus?.({
+        preventScroll: true,
+      })
     })
 
     return () => {
       document.removeEventListener('keydown', handleKey, true)
       document.body.style.overflow = ''
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 

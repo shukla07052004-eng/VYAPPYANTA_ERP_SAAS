@@ -268,99 +268,19 @@ export async function INIT_INVOICES() {
   const response = await fetch("/api/newInvoice", {
     method: "GET",
     cache: "no-store",
-  });
+  })
 
-  const result = await response.json();
+  const result = await response.json()
 
   if (!response.ok || !result.success) {
-    throw new Error(result.message || "Failed to fetch invoices");
+    throw new Error(
+      result.message || "Failed to fetch invoices"
+    )
   }
 
-  return (result.data ?? []).map((normalizeInvoice) => ({
-    // =========================
-    // IDs
-    // =========================
-    id: normalizeInvoice._id?.toString?.() ?? normalizeInvoice._id ?? "",
-
-    invoiceNumber: normalizeInvoice.invoiceNumber ?? "",
-    invoiceType: normalizeInvoice.invoiceType ?? "Tax Invoice",
-
-    // =========================
-    // Party
-    // =========================
-    partyId:
-      normalizeInvoice.partyId?.toString?.() ??
-      normalizeInvoice.partyId ??
-      "",
-
-    partySnapshot: {
-      name: normalizeInvoice.partySnapshot?.name ?? "",
-      gstin: normalizeInvoice.partySnapshot?.gstin ?? "",
-      phone: normalizeInvoice.partySnapshot?.phone ?? "",
-      contactPerson: normalizeInvoice.partySnapshot?.contactPerson ?? "",
-      billingAddress: normalizeInvoice.partySnapshot?.billingAddress ?? "",
-      city: normalizeInvoice.partySnapshot?.city ?? "",
-    },
-
-    // Keep these because your existing frontend
-    // may already use them.
-    party: normalizeInvoice.partySnapshot?.name ?? "",
-    phone: normalizeInvoice.partySnapshot?.phone ?? "",
-    city: normalizeInvoice.partySnapshot?.city ?? "",
-    gstin: normalizeInvoice.partySnapshot?.gstin ?? "",
-
-    // =========================
-    // Dates
-    // =========================
-    date: normalizeInvoice.invoiceDate ?? normalizeInvoice.createdAt ?? "",
-    invoiceDate: normalizeInvoice.invoiceDate ?? null,
-    dueDate: normalizeInvoice.dueDate ?? null,
-
-    createdAt: normalizeInvoice.createdAt ?? null,
-    updatedAt: normalizeInvoice.updatedAt ?? null,
-
-    // =========================
-    // Items
-    // =========================
-    items: (normalizeInvoice.items ?? []).map((item) => ({
-      itemId:
-        item.itemId?.toString?.() ??
-        item.itemId ??
-        "",
-
-      desc: item.desc ?? "",
-      hsn: item.hsn ?? "",
-
-      qty: Number(item.qty ?? 0),
-      rate: Number(item.rate ?? 0),
-
-      discountPct: Number(item.discountPct ?? 0),
-      taxPct: Number(item.taxPct ?? 0),
-
-      baseAmount: Number(item.baseAmount ?? 0),
-      taxAmount: Number(item.taxAmount ?? 0),
-      amount: Number(item.amount ?? 0),
-    })),
-
-    // =========================
-    // Totals
-    // =========================
-    subtotal: Number(normalizeInvoice.subtotal ?? 0),
-    tax: Number(normalizeInvoice.tax ?? 0),
-    total: Number(normalizeInvoice.total ?? 0),
-    paid: Number(normalizeInvoice.paid ?? 0),
-
-    // =========================
-    // Status
-    // =========================
-    status: normalizeInvoice.status ?? "Pending",
-
-    // =========================
-    // Other
-    // =========================
-    transport: normalizeInvoice.transport ?? {},
-    notes: normalizeInvoice.notes ?? "",
-  }));
+  return (result.data ?? [])
+    .map(normalizeInvoice)
+    .filter(Boolean)
 }
 export async function INIT_PARTIES() {
   const response = await fetch("/api/newParty", {
@@ -381,121 +301,22 @@ export async function INIT_PARTIES() {
   );
 }
 export async function INIT_PURCHASES() {
-  const response = await fetch('/api/newPurchase',
-    {
-      method: 'GET',
-      cache: "no-store",
-    }
-  )
+  const response = await fetch("/api/newPurchase", {
+    method: "GET",
+    cache: "no-store",
+  })
 
   const result = await response.json()
 
-  if (!result.success || !response.ok) {
-    throw new Error(result.message || "Failed to fetch Purchase");
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.message || "Failed to fetch purchases"
+    )
   }
 
-  return (result.data ?? []).map((normalizePurchase) => ({
-    // =========================
-    // IDs
-    // =========================
-    id:
-      normalizePurchase._id?.toString?.() ??
-      normalizePurchase.id ??
-      "",
-
-    // =========================
-    // Purchase / Bill
-    // =========================
-    billNo: normalizePurchase.billNo ?? "",
-
-    purchaseType: normalizePurchase.purchaseType ?? "Purchase Bill",
-
-    // =========================
-    // Supplier
-    // =========================
-    customer: {
-      Party: normalizePurchase.customer?.Party ?? "",
-      phone: normalizePurchase.customer?.phone ?? "",
-      city: normalizePurchase.customer?.city ?? "",
-      gstin: normalizePurchase.customer?.gstin ?? "",
-      contactPerson: normalizePurchase.customer?.contactPerson ?? "",
-      billingAddress: normalizePurchase.customer?.billingAddress ?? "",
-    },
-
-    // Keep convenient flat fields
-    // for existing frontend usage
-    supplier: normalizePurchase.customer?.Party ?? "",
-    phone: normalizePurchase.customer?.phone ?? "",
-    city: normalizePurchase.customer?.city ?? "",
-    gstin: normalizePurchase.customer?.gstin ?? "",
-    contactPerson: normalizePurchase.customer?.contactPerson ?? "",
-    billingAddress: normalizePurchase.customer?.billingAddress ?? "",
-
-    // =========================
-    // Dates
-    // =========================
-    date: normalizePurchase.date ?? "",
-    dueDate: normalizePurchase.dueDate ?? "",
-
-    // =========================
-    // Items
-    // =========================
-    items: (normalizePurchase.items ?? []).map((item) => ({
-      id:
-        item._id?.toString?.() ??
-        item._id ??
-        "",
-
-      desc: item.desc ?? "",
-      hsn: item.hsn ?? "",
-
-      qty: Number(item.qty ?? 0),
-      rate: Number(item.rate ?? 0),
-
-      discountPct: Number(item.discountPct ?? 0),
-      taxPct: Number(item.taxPct ?? 0),
-
-      taxLabel: item.taxLabel ?? "",
-
-      baseAmount: Number(item.baseAmount ?? 0),
-      taxAmount: Number(item.taxAmount ?? 0),
-      amount: Number(item.amount ?? 0),
-    })),
-
-    // =========================
-    // Totals
-    // =========================
-    subtotal: Number(normalizePurchase.subtotal ?? 0),
-
-    tax: Number(normalizePurchase.tax ?? 0),
-
-    taxBreakdown: (normalizePurchase.taxBreakdown ?? []).map((row) => ({
-      rate: Number(row.rate ?? 0),
-      taxable: Number(row.taxable ?? 0),
-    })),
-
-    amount: Number(normalizePurchase.amount ?? 0),
-
-    paid: Number(normalizePurchase.paid ?? 0),
-
-    // =========================
-    // Payment / Status
-    // =========================
-    mode: normalizePurchase.mode ?? "Credit",
-
-    status: normalizePurchase.status ?? "Unpaid",
-
-    // =========================
-    // Other
-    // =========================
-    notes: normalizePurchase.notes ?? "",
-
-    // =========================
-    // Timestamps
-    // =========================
-    createdAt: normalizePurchase.createdAt ?? null,
-    updatedAt: normalizePurchase.updatedAt ?? null,
-  }));
+  return (result.data ?? [])
+    .map(normalizePurchase)
+    .filter(Boolean)
 }
 
 export const INIT_EXPENSES = [
@@ -523,14 +344,45 @@ export const BANK_ENTRIES = [
   { date: '03 Apr', description: 'Salary Transfer', credit: 0, debit: 65000 },
 ]
 
-export const INIT_WORKERS = [
-  { id: 1, name: 'Rakesh Kumar', role: 'Store Manager', phone: '9876501234', salary: 18000, join: 'Jan 2022', attendance: 26, days: 26, paid: false, advance: 0 },
-  { id: 2, name: 'Sunita Devi', role: 'Accountant', phone: '9765401234', salary: 14000, join: 'Mar 2023', attendance: 25, days: 26, paid: true, advance: 2000 },
-  { id: 3, name: 'Mohit Yadav', role: 'Salesman', phone: '9654312340', salary: 12000, join: 'Jun 2023', attendance: 24, days: 26, paid: false, advance: 0 },
-  { id: 4, name: 'Priya Singh', role: 'Data Entry', phone: '9543212345', salary: 10000, join: 'Sep 2023', attendance: 26, days: 26, paid: false, advance: 0 },
-  { id: 5, name: 'Anil Gupta', role: 'Driver', phone: '9432123456', salary: 11000, join: 'Feb 2024', attendance: 22, days: 26, paid: false, advance: 500 },
-]
 
+
+export async function INIT_WORKERS() {
+  const response = await fetch("/api/Worker", {
+    method: "GET",
+    cache: "no-store",
+  })
+
+  const result = await response.json()
+
+  console.log("WORKER GET RESPONSE:", result)
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Failed to fetch workers")
+  }
+
+  return (result.data ?? []).map((worker) => ({
+    id: String(worker._id ?? worker.id ?? ""),
+
+    name: worker.fullName ?? "",
+    role: worker.Role ?? "",
+    phone: worker.Phone ?? "",
+    salary: Number(worker.Salary ?? 0),
+    join: worker.joinDate ?? "",
+
+    paid: Boolean(worker.paid ?? false),
+    advance: Number(worker.advance ?? 0),
+  }))
+}
+
+
+
+// export const INIT_WORKERS = [
+//   { id: 1, name: 'Rakesh Kumar', role: 'Store Manager', phone: '9876501234', salary: 18000, join: 'Jan 2022', attendance: 26, days: 26, paid: false, advance: 0 },
+//   { id: 2, name: 'Sunita Devi', role: 'Accountant', phone: '9765401234', salary: 14000, join: 'Mar 2023', attendance: 25, days: 26, paid: true, advance: 2000 },
+//   { id: 3, name: 'Mohit Yadav', role: 'Salesman', phone: '9654312340', salary: 12000, join: 'Jun 2023', attendance: 24, days: 26, paid: false, advance: 0 },
+//   { id: 4, name: 'Priya Singh', role: 'Data Entry', phone: '9543212345', salary: 10000, join: 'Sep 2023', attendance: 26, days: 26, paid: false, advance: 0 },
+//   { id: 5, name: 'Anil Gupta', role: 'Driver', phone: '9432123456', salary: 11000, join: 'Feb 2024', attendance: 22, days: 26, paid: false, advance: 500 },
+// ]
 export const BACKUPS = [
   { date: '04 Apr 09:00', size: '12.4 MB', type: 'Auto', status: 'OK' },
   { date: '03 Apr 23:00', size: '12.1 MB', type: 'Auto', status: 'OK' },
@@ -554,7 +406,7 @@ export function getDefaultErpState() {
     parties: [],
     purchases: [],
     expenses: structuredCloneSafe(INIT_EXPENSES),
-    workers: structuredCloneSafe(INIT_WORKERS),
+    workers: [],
 
     items: [],
 
@@ -607,63 +459,32 @@ export function loadErpState() {
   }
 }
 // ************************************************************************This function is going to replace loadErpState()************************************************************************************
-export async function initializeErpInvoiceData() {
-  try {
-    const invoices = await INIT_INVOICES();
+export async function initializeErpData() {
+  const [
+    invoices,
+    parties,
+    purchases,
+    workers,
+  ] = await Promise.all([
+    INIT_INVOICES(),
+    INIT_PARTIES(),
+    INIT_PURCHASES(),
+    INIT_WORKERS(),
+  ])
 
-    const cached = loadErpState();
+  const cached = loadErpState()
 
-    const state = {
-      ...cached,
-      invoices,
-    };
-
-    saveErpState(state);
-
-    return state;
-  } catch (error) {
-    console.error("Failed to initialize ERP:", error);
-
-    throw error;
+  const state = {
+    ...cached,
+    invoices,
+    parties,
+    purchases,
+    workers,
   }
-}
-export async function initializeErpPurchaseData() {
-  try {
-    const purchases = await INIT_PURCHASES();
 
-    const cached = loadErpState();
+  saveErpState(state)
 
-    const state = {
-      ...cached,
-      purchases,
-    };
-
-    saveErpState(state);
-
-    return state;
-  } catch (error) {
-    console.error("Failed to initialize ERP purchases:", error);
-    throw error;
-  }
-}
-export async function initializeErpPartiesData() {
-  try {
-    const parties = await INIT_PARTIES();
-
-    const cached = loadErpState();
-
-    const state = {
-      ...cached,
-      parties,
-    };
-
-    saveErpState(state);
-
-    return state;
-  } catch (error) {
-    console.error("Failed to initialize ERP parties:", error);
-    throw error;
-  }
+  return state
 }
 export function saveErpState(state) {
   if (typeof window === 'undefined' || !state) return false

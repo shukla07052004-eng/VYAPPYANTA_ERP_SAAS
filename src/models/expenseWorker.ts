@@ -2,41 +2,41 @@ import mongoose, { Schema, Document } from "mongoose";
 import { Types } from "mongoose";
 
 export interface Expense extends Document {
-    Title: string;
-    Category: string;
-    Amount: number;
-    expenseDate: Date;
-    Mode:string;
-    Note:string;
+    title: string;
+    category: string;
+    amount: number;
+    date: Date;
+    mode:string;
+    notes:string;
 }
 
 const ExpenseSchema: Schema<Expense> = new Schema(
     {
-        Title:{
+        title:{
             type:String,
             required: true,
             trim: true,
             lowercase: true
         },        
-        Category:{
+        category:{
             type: String,
             required: true,
             enum:["Electricity", "Salary", "Rent", "Transport", "Internet", "Maintenance", "Miscellaneous"]
         },
-        Amount:{
+        amount:{
             type:Number,
             required:true
         },
-        expenseDate:{
+        date:{
             type:Date,
             required:true
         },
-        Mode:{
+        mode:{
             type:String,
             required:true,
             enum: ["Cash", "UPI", "Bank", "Check"]
         },
-        Note:{
+        notes:{
             type:String,
             required:true
         }

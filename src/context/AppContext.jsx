@@ -10,7 +10,8 @@ import {
   getDefaultErpState,
   INIT_INVOICES,
   INIT_PURCHASES,
-  INIT_PARTIES
+  INIT_PARTIES,
+  INIT_WORKERS
 } from '../data/store.js'
 import {
   buildNormalizedErpData,
@@ -303,32 +304,41 @@ export function AppProvider({ children }) {
     loadParties();
   }, []);
 
-  useEffect(() => {
-    let cancelled = false
+useEffect(() => {
+  let cancelled = false
 
-    async function refreshFromDatabase() {
-      try {
-        const [freshInvoices, freshPurchases] = await Promise.all([
-          INIT_INVOICES(),
-          INIT_PURCHASES(),
-        ])
+  async function refreshFromDatabase() {
+    try {
+      const [
+        freshInvoices,
+        freshPurchases,
+        freshWorkers,
+      ] = await Promise.all([
+        INIT_INVOICES(),
+        INIT_PURCHASES(),
+        INIT_WORKERS(),
+      ])
 
-        if (cancelled) return
+      if (cancelled) return
 
-        setInvoices(freshInvoices)
-        setPurchases(freshPurchases)
+      setInvoices(freshInvoices)
+      setPurchases(freshPurchases)
+      setWorkers(freshWorkers)
 
-      } catch (error) {
-        console.error("ERP database refresh failed:", error)
-      }
+      console.log("Workers loaded from MongoDB:", freshWorkers)
+
+    } catch (error) {
+      console.error("ERP database refresh failed:", error)
     }
+  }
 
-    refreshFromDatabase()
+  refreshFromDatabase()
 
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  return () => {
+    cancelled = true
+  }
+}, [])
+
 
   const deleteParty = useCallback(async (partyId) => {
   const response = await fetch(

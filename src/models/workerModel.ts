@@ -6,35 +6,47 @@ export interface Worker extends Document {
     Role: string;
     Phone: number;
     Salary: number;
-    joinDate:Date;
+    joinDate: Date;
+    paid: boolean,
+    advance: number,
 }
 
 const WorkerSchema: Schema<Worker> = new Schema(
     {
-        fullName:{
-            type:String,
+        fullName: {
+            type: String,
             required: true,
             trim: true,
             lowercase: true
-        },        
-        Role:{
+        },
+        Role: {
             type: String,
             required: true
         },
-        Phone:{
-            type:Number,
-            required:true
+        Phone: {
+            type: Number,
+            required: true
         },
-        Salary:{
-            type:Number,
-            required:true
+        Salary: {
+            type: Number,
+            required: true
         },
-        joinDate:{
-            type:Date,
-            required:true
+        joinDate: {
+            type: Date,
+            required: true
         },
-        
-        
+        paid: {
+      type: Boolean,
+      default: false,
+    },
+
+    advance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+
 
     },
     {
