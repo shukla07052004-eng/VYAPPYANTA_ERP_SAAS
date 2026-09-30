@@ -14,7 +14,7 @@ const ACCOUNT_TYPE = ['Savings Account', 'Current Account', 'Fixed Deposit', 'Re
 export default function BankingModulePage() {
   const { moduleId } = useParams()
   const router = useRouter()
-  const { loans, checks, bankAccounts, cashTransactions, updateLoan, upsertLoan, deleteLoan, upsertBankAccount, deleteBankAccount, refreshBankingData } = useApp()
+  const { loans, checks, bankAccounts, cashTransactions, upsertLoan, deleteLoan, upsertBankAccount, deleteBankAccount, refreshBankingData } = useApp()
   const module = BANKING_DEFINITIONS.find((entry) => entry.id === moduleId)
   const [editor, setEditor] = useState(null)
   if (!module) return null
@@ -51,15 +51,7 @@ export default function BankingModulePage() {
         <LoanEditorModal
           value={editor}
           onClose={() => setEditor(null)}
-          onSave={(form) => {
-            if (form.id) {
-              updateLoan(form.id, form)
-            } else {
-              upsertLoan(form)
-            }
-
-            setEditor(null)
-          }}
+          onSave={(payload) => { upsertLoan(payload); setEditor(null) }}
         />
       </div>
     )
@@ -175,41 +167,6 @@ function LoanEditorModal({ value, onClose, onSave }) {
 
 function LoanEditorForm({ initialValue, onClose, onSave }) {
   const [form, setForm] = useState(initialValue)
-  const toast = useToast()
-
-  const loanSave = async () => {
-    try {
-      const response = await fetch("/api/Loan", {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to save loan');
-      }
-      // Update parent state
-      onSave?.(result.data);
-      toast(`${result.data.name} added`, "success");
-      // Close editor
-      onClose();
-      // Update local form if needed
-      setForm(result.data);
-
-
-    } catch (error) {
-      console.error("Add loan error:", error)
-
-      toast(
-        error?.message || "Failed to add loan",
-        "error"
-      )
-    }
-  }
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <FormGrid cols={2}>
@@ -223,7 +180,7 @@ function LoanEditorForm({ initialValue, onClose, onSave }) {
       <Textarea label="Reminder" value={form.reminder} onChange={(event) => setForm((current) => ({ ...current, reminder: event.target.value }))} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" onClick={loanSave}>Save Loan</Button>
+        <Button variant="primary" onClick={() => onSave(form)}>Save Loan</Button>
       </div>
     </div>
   )

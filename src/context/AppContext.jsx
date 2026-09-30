@@ -32,6 +32,7 @@ import {
   SAMPLE_LOANS,
   SHARED_COMPANIES,
 } from '../data/erpModules.js'
+import { stringify } from 'querystring'
 
 const AppContext = createContext(null)
 export function normalizeItem(item = {}) {
@@ -696,13 +697,76 @@ export function AppProvider({ children }) {
     setBackupSettings((current) => ({ ...current, ...settings }))
   }, [])
 
-  const upsertLoan = useCallback((payload) => {
-    setLoans((prev) => {
-      const existing = prev.find((loan) => loan.id === payload.id)
-      if (existing) return prev.map((loan) => (loan.id === payload.id ? { ...loan, ...payload } : loan))
-      return [{ ...payload, id: payload.id ?? `loan-${Date.now()}` }, ...prev]
-    })
-  }, [])
+  const upsertLoan = useCallback(async (payload) => {
+    try {
+      const isEditing = Boolean(payload.id);
+
+      const loanData = {
+        ...payload,
+      };
+
+      // Don't send frontend id to POST/PATCH body
+      delete loanData.id;
+      delete loanData._id;
+
+      const response = await fetch(
+        isEditing
+          ? `/api/Loan/${payload.id}`
+          : `/api/Loan`,
+        {
+          method: isEditing ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(loanData),
+        }
+      );
+
+      const result = await response.json();
+
+      console.log("LOAN REQUEST:", {
+        isEditing,
+        payload,
+        loanData,
+        status: response.status,
+        result,
+      });
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || `Failed to ${isEditing ? 'update' : 'save'} loan`
+        );
+      }
+
+      const savedLoan = {
+        ...result.data,
+        id: String(result.data._id ?? result.data.id),
+      };
+
+      setLoans((prev) => {
+        if (isEditing) {
+          return prev.map((loan) =>
+            String(loan.id) === String(savedLoan.id)
+              ? savedLoan
+              : loan
+          );
+        }
+
+        return [savedLoan, ...prev];
+      });
+
+      toast(
+        `${savedLoan.name} ${isEditing ? 'UPDATED' : 'ADDED'}`,
+        'success'
+      );
+
+      return savedLoan;
+
+    } catch (error) {
+      console.error('❌ LOAN SAVE ERROR:', error);
+      throw error;
+    }
+  }, [toast]);
 
   const updateLoan = async (LoanId, form) => {
     try {
@@ -819,7 +883,7 @@ export function AppProvider({ children }) {
     }
   }, [toast]);
 
-  const deleteBankAccount = useCallback(async(accountId) => {
+  const deleteBankAccount = useCallback(async (accountId) => {
     const response = await fetch(
       `/api/Bank?id=${encodeURIComponent(String(accountId))}`,
       {
