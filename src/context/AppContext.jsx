@@ -821,7 +821,7 @@ export function AppProvider({ children }) {
 
   const deleteBankAccount = useCallback(async(accountId) => {
     const response = await fetch(
-      `/api/Bank?id=${encodeURIComponent(String(partyId))}`,
+      `/api/Bank?id=${encodeURIComponent(String(accountId))}`,
       {
         method: "DELETE",
       }
@@ -838,7 +838,7 @@ export function AppProvider({ children }) {
     setBankAccounts((prev) =>
       prev.filter(
         (account) =>
-          String(account._id ?? party.id) !== String(accountId)
+          String(account._id ?? account.id) !== String(accountId)
       )
     );
 
