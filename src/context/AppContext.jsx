@@ -108,35 +108,23 @@ function buildInitialItemMaster({ sales = [], purchases = [] }) {
             key,
             normalizeItem({
               id: item.itemId || `legacy-${byName.size + 1}`,
-
               name: item.desc,
-
               category: 'Other Goods',
-
               gstSlab: Number(item.taxPct) || 18,
-
               gst: Number(item.taxPct) || 18,
-
               purchasePrice:
                 type === 'purchase'
                   ? Number(item.rate) || 0
                   : 0,
-
               salesPrice:
                 type === 'sales'
                   ? Number(item.rate) || 0
                   : 0,
-
               mrp: Number(item.rate) || 0,
-
               stockQty: 0,
-
               discount: Number(item.discountPct) || 0,
-
               hsn: item.hsn || '',
-
               recentScore: 1,
-
               recentUsedOn: entry.date || '',
             })
           )
@@ -146,44 +134,34 @@ function buildInitialItemMaster({ sales = [], purchases = [] }) {
 
         byName.set(key, normalizeItem({
           ...current,
-
           id: current.id,
-
           hsn: current.hsn || item.hsn || '',
-
           gstSlab:
             Number(item.taxPct) ||
             current.gstSlab ||
             18,
-
           gst:
             Number(item.taxPct) ||
             current.gst ||
             18,
-
           purchasePrice:
             type === 'purchase'
               ? Number(item.rate) || current.purchasePrice
               : current.purchasePrice,
-
           salesPrice:
             type === 'sales'
               ? Number(item.rate) || current.salesPrice
               : current.salesPrice,
-
           mrp:
             current.mrp ||
             Number(item.rate) ||
             0,
-
           discount:
             current.discount ||
             Number(item.discountPct) ||
             0,
-
           recentScore:
             Number(current.recentScore || 0) + 1,
-
           recentUsedOn:
             entry.date ||
             current.recentUsedOn,
@@ -697,7 +675,7 @@ export function AppProvider({ children }) {
     setBackupSettings((current) => ({ ...current, ...settings }))
   }, [])
 
-  const upsertLoan = useCallback(async (payload) => {
+  const upsertLoan  = useCallback(async (payload) => {
     try {
       const isEditing = Boolean(payload.id);
 
@@ -768,47 +746,9 @@ export function AppProvider({ children }) {
     }
   }, [toast]);
 
-  const updateLoan = async (LoanId, form) => {
-    try {
-      const { _id, id, ...loanData } = form;
-
-      const response = await fetch(`/api/Loan/${LoanId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(loanData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to update loan");
-      }
-
-      const updatedLoan = {
-        ...result.data,
-        id: String(result.data._id ?? result.data.id),
-      };
-
-      setLoans((prev) =>
-        prev.map((loan) =>
-          String(loan.id) === String(LoanId)
-            ? updatedLoan
-            : loan
-        )
-      );
-
-      setEditor(null);
-
-      console.log("Loan updated:", updatedLoan);
-    } catch (error) {
-      console.error("Update loan error:", error);
-    }
-  };
   const deleteLoan = async (id) => {
     try {
-      const response = await fetch(`/api/loan/${id}`, {
+      const response = await fetch(`/api/Loan/${id}`, {
         method: "DELETE",
       });
 
@@ -1210,7 +1150,6 @@ export function AppProvider({ children }) {
       saveBackupSettings,
       refreshBankingData,
       upsertLoan,
-      updateLoan,
       deleteLoan,
       upsertBankAccount,
       deleteBankAccount,
