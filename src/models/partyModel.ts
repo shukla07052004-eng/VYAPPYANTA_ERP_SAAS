@@ -30,7 +30,6 @@ export interface Party extends Document {
     companyName: string;
     partyCode: string;
     gstin: string;
-    taxID: string;
     primaryContactName: string;
     primaryContactRole: string;
     phone: string;
@@ -99,14 +98,6 @@ const PartySchema = new Schema(
       required:true,
       trim:true,
     },
-
-    taxID: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true
-    },
-
     primaryContactName: {
       type: String,
       required: true
@@ -154,14 +145,8 @@ const PartySchema = new Schema(
 
     paymentTerm: {
       type: String,
-      enum: [
-        "Net 7",
-        "Net 15",
-        "Net 30",
-        "Net 45",
-        "COD",
-        "Advance"
-      ]
+      enum: ['Net 7', 'Net 15', 'Net 30', 'Net 45', 'COD', 'Advance'],
+      required: true
     },
 
     creditLimit: {

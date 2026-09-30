@@ -4,6 +4,7 @@ import { createInvoiceRecord } from '../data/salesData.js'
 import { createPartyRecord } from '../data/partyData.js'
 import { createPurchaseRecord } from '../data/purchaseData.js'
 import { createExpenseRecord } from '../data/expenseData.js'
+import { useToast } from "@/context/ToastContext.jsx"
 import {
   loadErpState,
   saveErpState,
@@ -11,7 +12,8 @@ import {
   INIT_INVOICES,
   INIT_PURCHASES,
   INIT_PARTIES,
-  INIT_WORKERS
+  INIT_WORKERS,
+  INIT_EXPENSES
 } from '../data/store.js'
 import {
   buildNormalizedErpData,
@@ -73,25 +75,15 @@ function buildInitialItemMaster({ sales = [], purchases = [] }) {
 
     byName.set(key, normalizeItem({
       id: row.sku || `legacy-${index + 1}`,
-
       name: row.item,
-
       category: guessCategory(row.item),
-
       gstSlab: row.gstSlab ?? 18,
-
       gst: row.gstSlab ?? 18,
-
       purchasePrice: row.valuationRate || 0,
-
       salesPrice: row.valuationRate || 0,
-
       mrp: row.valuationRate || 0,
-
       stockQty: row.closingQty,
-
       hsn: row.hsn || '',
-
       status: row.closingQty > 0
         ? 'Active'
         : 'Inactive',
@@ -267,6 +259,7 @@ export function AppProvider({ children }) {
   )
   const [invoices, setInvoices] = useState(initialErpState.invoices)
   const [parties, setParties] = useState([])
+  const toast = useToast()
   const [purchases, setPurchases] = useState(initialErpState.purchases)
   const [expenses, setExpenses] = useState(initialErpState.expenses)
   const [workers, setWorkers] = useState(initialErpState.workers)
@@ -274,9 +267,9 @@ export function AppProvider({ children }) {
   const [importMeta, setImportMeta] = useState(initialErpState.importMeta)
   const [companies, setCompanies] = useState(SAMPLE_COMPANIES)
   const [sharedCompanies] = useState(SHARED_COMPANIES)
-  const [loans, setLoans] = useState(SAMPLE_LOANS)
+  const [loans, setLoans] = useState([])
   const [checks] = useState(SAMPLE_CHECKS)
-  const [bankAccounts, setBankAccounts] = useState(SAMPLE_BANK_ACCOUNTS)
+  const [bankAccounts, setBankAccounts] = useState([])
   const [cashTransactions] = useState(SAMPLE_CASH_TRANSACTIONS)
   const [backupSettings, setBackupSettings] = useState(SAMPLE_BACKUP_SETTINGS)
   const [items, setItems] = useState(() => {
@@ -304,67 +297,100 @@ export function AppProvider({ children }) {
     loadParties();
   }, []);
 
-useEffect(() => {
-  let cancelled = false
+  useEffect(() => {
+    let cancelled = false
 
-  async function refreshFromDatabase() {
+    async function refreshFromDatabase() {
+      try {
+        const [
+          freshInvoices,
+          freshPurchases,
+          freshWorkers,
+          freshExpenses,
+        ] = await Promise.all([
+          INIT_INVOICES(),
+          INIT_PURCHASES(),
+          INIT_WORKERS(),
+          INIT_EXPENSES(),
+        ])
+
+        if (cancelled) return
+
+        setInvoices(freshInvoices)
+        setPurchases(freshPurchases)
+        setWorkers(freshWorkers)
+        setExpenses(freshExpenses)
+
+        console.log("Workers loaded from MongoDB:", freshWorkers)
+
+      } catch (error) {
+        console.error("ERP database refresh failed:", error)
+      }
+    }
+
+    refreshFromDatabase()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const refreshBankingData = useCallback(async () => {
     try {
       const [
-        freshInvoices,
-        freshPurchases,
-        freshWorkers,
+        freshLoans,
+        freshBanks,
       ] = await Promise.all([
-        INIT_INVOICES(),
-        INIT_PURCHASES(),
-        INIT_WORKERS(),
-      ])
+        SAMPLE_LOANS(),
+        SAMPLE_BANK_ACCOUNTS(),
+      ]);
 
-      if (cancelled) return
+      setLoans(freshLoans);
+      setBankAccounts(freshBanks);
 
-      setInvoices(freshInvoices)
-      setPurchases(freshPurchases)
-      setWorkers(freshWorkers)
+      console.log("Banking data refreshed from MongoDB");
 
-      console.log("Workers loaded from MongoDB:", freshWorkers)
-
+      return {
+        loans: freshLoans,
+        bankAccounts: freshBanks,
+      };
     } catch (error) {
-      console.error("ERP database refresh failed:", error)
+      console.error("Failed to refresh banking data:", error);
+      throw error;
     }
-  }
+  }, []);
 
-  refreshFromDatabase()
+  useEffect(() => {
+    refreshBankingData();
+  }, [refreshBankingData]);
 
-  return () => {
-    cancelled = true
-  }
-}, [])
 
 
   const deleteParty = useCallback(async (partyId) => {
-  const response = await fetch(
-    `/api/newParty?id=${encodeURIComponent(String(partyId))}`,
-    {
-      method: "DELETE",
-    }
-  );
-
-  const result = await response.json();
-
-  if (!response.ok || !result.success) {
-    throw new Error(
-      result.message || "Failed to delete party"
+    const response = await fetch(
+      `/api/newParty?id=${encodeURIComponent(String(partyId))}`,
+      {
+        method: "DELETE",
+      }
     );
-  }
 
-  setParties((prev) =>
-    prev.filter(
-      (party) =>
-        String(party._id ?? party.id) !== String(partyId)
-    )
-  );
+    const result = await response.json();
 
-  return true;
-}, []);
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || "Failed to delete party"
+      );
+    }
+
+    setParties((prev) =>
+      prev.filter(
+        (party) =>
+          String(party._id ?? party.id) !== String(partyId)
+      )
+    );
+
+    return true;
+  }, []);
 
   useEffect(() => {
     const loadItemsFromMongoDB = async () => {
@@ -552,6 +578,57 @@ useEffect(() => {
     return true
   }, [])
 
+  const deleteExpense = useCallback(async (expenseId) => {
+    const response = await fetch(
+      `/api/Expense/${expenseId}`,
+      {
+        method: "DELETE",
+      }
+    )
+
+    const result = await response.json()
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || "Failed to delete Expense"
+      )
+    }
+
+    setExpenses((prev) =>
+      prev.filter(
+        (expenses) =>
+          String(expenses.id) !== String(expenseId)
+      )
+    )
+
+    return true
+  }, [])
+  const deleteWorker = useCallback(async (workerId) => {
+    const response = await fetch(
+      `/api/Worker/${workerId}`,
+      {
+        method: "DELETE",
+      }
+    )
+
+    const result = await response.json()
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || "Failed to delete Expense"
+      )
+    }
+
+    setExpenses((prev) =>
+      prev.filter(
+        (Workers) =>
+          String(Workers.id) !== String(workerId)
+      )
+    )
+
+    return true
+  }, [])
+
 
   const addParty = useCallback((party) => {
     setParties((prev) => [party, ...prev])
@@ -627,20 +704,145 @@ useEffect(() => {
     })
   }, [])
 
-  const deleteLoan = useCallback((loanId) => {
-    setLoans((prev) => prev.filter((loan) => loan.id !== loanId))
-  }, [])
+  const updateLoan = async (LoanId, form) => {
+    try {
+      const { _id, id, ...loanData } = form;
 
-  const upsertBankAccount = useCallback((payload) => {
-    setBankAccounts((prev) => {
-      const existing = prev.find((account) => account.id === payload.id)
-      if (existing) return prev.map((account) => (account.id === payload.id ? { ...account, ...payload } : account))
-      return [{ ...payload, id: payload.id ?? `bank-${Date.now()}` }, ...prev]
-    })
-  }, [])
+      const response = await fetch(`/api/Loan/${LoanId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(loanData),
+      });
 
-  const deleteBankAccount = useCallback((accountId) => {
-    setBankAccounts((prev) => prev.filter((account) => account.id !== accountId))
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to update loan");
+      }
+
+      const updatedLoan = {
+        ...result.data,
+        id: String(result.data._id ?? result.data.id),
+      };
+
+      setLoans((prev) =>
+        prev.map((loan) =>
+          String(loan.id) === String(LoanId)
+            ? updatedLoan
+            : loan
+        )
+      );
+
+      setEditor(null);
+
+      console.log("Loan updated:", updatedLoan);
+    } catch (error) {
+      console.error("Update loan error:", error);
+    }
+  };
+  const deleteLoan = async (id) => {
+    try {
+      const response = await fetch(`/api/loan/${id}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to delete loan");
+      }
+
+      // Remove deleted loan from UI
+      setLoans((prev) =>
+        prev.filter((loan) => loan.id !== id)
+      );
+
+      console.log("Loan deleted:", result);
+    } catch (error) {
+      console.error("Delete loan error:", error);
+    }
+  };
+
+  const upsertBankAccount = useCallback(async (payload) => {
+    try {
+      const isEditing = Boolean(payload.id);
+
+      const response = await fetch(
+        isEditing
+          ? `/api/Bank/${payload.id}`
+          : `/api/Bank`,
+        {
+          method: isEditing ? "PATCH" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+          `Failed to ${isEditing ? "update" : "create"} bank account`
+        );
+      }
+
+      const savedBank = result.data;
+
+      setBankAccounts((prev) => {
+        if (isEditing) {
+          return prev.map((account) =>
+            account.id === savedBank.id
+              ? savedBank
+              : account
+          );
+        }
+
+        return [savedBank, ...prev];
+      });
+
+      toast(
+        `${savedBank.bankName} ${isEditing ? "UPDATED" : "ADDED"
+        }`,
+        "success"
+      );
+
+      return savedBank;
+
+    } catch (error) {
+      console.error("BANK SAVE ERROR:", error);
+      throw error;
+    }
+  }, [toast]);
+
+  const deleteBankAccount = useCallback(async(accountId) => {
+    const response = await fetch(
+      `/api/Bank?id=${encodeURIComponent(String(partyId))}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(
+        result.message || "Failed to delete party"
+      );
+    }
+
+    setBankAccounts((prev) =>
+      prev.filter(
+        (account) =>
+          String(account._id ?? party.id) !== String(accountId)
+      )
+    );
+
+    return true;
   }, [])
 
   const addItem = useCallback(async (item) => {
@@ -927,7 +1129,9 @@ useEffect(() => {
       importMeta,
       erpData,
       recordPayment,
+      deleteWorker,
       deleteInvoice,
+      deleteExpense,
       deletePurchase,
       addParty,
       updateParty,
@@ -940,7 +1144,9 @@ useEffect(() => {
       addCompany,
       addPurchase,
       saveBackupSettings,
+      refreshBankingData,
       upsertLoan,
+      updateLoan,
       deleteLoan,
       upsertBankAccount,
       deleteBankAccount,

@@ -47,7 +47,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!data.name?.trim()) {
+    const Name = String(data.Name ?? "").trim()
+    const Role = String(data.Role ?? "").trim()
+    const Phone = Number(data.Phone)
+    const Salary = Number(data.Salary)
+    const joinDate = data.joinDate || ""
+
+    if (!Name) {
       return NextResponse.json(
         {
           success: false,
@@ -57,12 +63,53 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    if (!Role) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Worker role is required",
+        },
+        { status: 400 }
+      )
+    }
+
+    if (!Number.isFinite(Phone)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Valid worker phone is required",
+        },
+        { status: 400 }
+      )
+    }
+
+    if (!Number.isFinite(Salary)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Valid worker salary is required",
+        },
+        { status: 400 }
+      )
+    }
+
+    if (!joinDate) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Worker join date is required",
+        },
+        { status: 400 }
+      )
+    }
+
     const worker = await Worker.create({
-      name: data.name.trim(),
-      role: data.role?.trim() || "",
-      phone: data.phone?.trim() || "",
-      salary: Number(data.salary) || 0,
-      join: data.join || "",
+      Name,
+      Role,
+      Phone,
+      Salary,
+      joinDate,
+
       paid: false,
       advance: 0,
     })
@@ -75,6 +122,7 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     )
+
   } catch (error) {
     console.error("Failed to add worker:", error)
 

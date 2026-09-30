@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 
 export interface Expense extends Document {
     title: string;
+    desc: string;
     category: string;
     amount: number;
     date: Date;
@@ -13,6 +14,12 @@ export interface Expense extends Document {
 const ExpenseSchema: Schema<Expense> = new Schema(
     {
         title:{
+            type:String,
+            required: true,
+            trim: true,
+            lowercase: true
+        },        
+        desc:{
             type:String,
             required: true,
             trim: true,

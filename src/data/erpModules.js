@@ -11,9 +11,9 @@ export const REPORT_MENU_ITEMS = [
 ]
 export const BANKING_DEFINITIONS = [
   { id: 'loan-accounts', path: '/banking/loan-accounts', label: 'Loan Accounts', name: 'Loan Accounts', desc: 'EMIs, balances and payment history.' },
-  { id: 'checks', path: '/banking/checks', label: 'Checks',name: 'checks', desc: 'Issue, deposit, clearance and bounce tracking.' },
+  { id: 'checks', path: '/banking/checks', label: 'Checks', name: 'checks', desc: 'Issue, deposit, clearance and bounce tracking.' },
   { id: 'bank-accounts', path: '/banking/bank-accounts', label: 'Bank Accounts', name: 'Bank Accounts', desc: 'Balances, transactions and transfers.' },
-  { id: 'cash-in-hand', path: '/banking/cash-in-hand', label: 'Cash In Hand',name:'Cash In Hand', desc: 'Daily cashbook and operational cash flow.' },
+  { id: 'cash-in-hand', path: '/banking/cash-in-hand', label: 'Cash In Hand', name: 'Cash In Hand', desc: 'Daily cashbook and operational cash flow.' },
 ]
 
 // const AI_INTELLIGENCE_CHILDREN = [
@@ -37,7 +37,7 @@ export const ERP_SIDEBAR_ITEMS = [
     label: 'Banking',
     icon: 'bank',
     path: '/banking',
-    children:BANKING_DEFINITIONS
+    children: BANKING_DEFINITIONS
   },
   {
     id: 'utilities',
@@ -154,10 +154,40 @@ export const SHARED_COMPANIES = [
   { id: 'shr-2', name: 'Northline Distributors', owner: 'Priya Bansal', sharedDate: '10 May 2026', accessType: 'Full Access' },
 ]
 
-export const SAMPLE_LOANS = [
-  { id: 'loan-1', name: 'Warehouse Expansion', institution: 'State Bank of India', interestRate: 10.25, emiAmount: 28500, dueDate: '2026-05-20', remainingBalance: 684000, totalPaid: 171000, pendingAmount: 684000, status: 'Active', paymentHistory: ['20 Apr 2026 - EMI cleared', '20 Mar 2026 - EMI cleared'], reminder: 'Next EMI due in 5 days' },
-  { id: 'loan-2', name: 'Delivery Van Finance', institution: 'Mahindra Finance', interestRate: 11.5, emiAmount: 12800, dueDate: '2026-05-24', remainingBalance: 158000, totalPaid: 76800, pendingAmount: 158000, status: 'Active', paymentHistory: ['24 Apr 2026 - EMI cleared', '24 Mar 2026 - EMI cleared'], reminder: 'Insurance due next month' },
-]
+export const SAMPLE_LOANS  = async () => {
+  const response = await fetch("/api/Loan", {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Failed to fetch loans");
+  }
+
+  return (result.data ?? [])
+    .filter(Boolean)
+    .map((loan) => {
+      return {
+        ...loan,
+
+        id: String(loan._id ?? loan.id),
+
+        name: loan.name ?? "",
+        institution: loan.institution ?? "",
+        interestRate: loan.interestRate ?? "",
+        emiAmount: loan.emiAmount ?? "",
+        dueDate: loan.dueDate.split("T")[0] ?? "",
+        remainingBalance: loan.remainingBalance ?? "",
+        reminder: loan.reminder ?? "",
+      };
+    });
+};
+// [
+//   { id: 'loan-1', name: 'Warehouse Expansion', institution: 'State Bank of India', interestRate: 10.25, emiAmount: 28500, dueDate: '2026-05-20', remainingBalance: 684000, totalPaid: 171000, pendingAmount: 684000, status: 'Active', paymentHistory: ['20 Apr 2026 - EMI cleared', '20 Mar 2026 - EMI cleared'], reminder: 'Next EMI due in 5 days' },
+//   { id: 'loan-2', name: 'Delivery Van Finance', institution: 'Mahindra Finance', interestRate: 11.5, emiAmount: 12800, dueDate: '2026-05-24', remainingBalance: 158000, totalPaid: 76800, pendingAmount: 158000, status: 'Active', paymentHistory: ['24 Apr 2026 - EMI cleared', '24 Mar 2026 - EMI cleared'], reminder: 'Insurance due next month' },
+// ]
 
 export const SAMPLE_CHECKS = [
   { id: 'chk-1', company: 'Sharma Traders', checkNumber: '003418', securityCheckNumber: 'SEC-8841', issueDate: '2026-05-02', depositDate: '2026-05-06', status: 'Pending', amount: 48200 },
@@ -165,10 +195,43 @@ export const SAMPLE_CHECKS = [
   { id: 'chk-3', company: 'National Distributors', checkNumber: '003428', securityCheckNumber: 'SEC-8850', issueDate: '2026-04-29', depositDate: '2026-05-04', status: 'Bounced', amount: 18400 },
 ]
 
-export const SAMPLE_BANK_ACCOUNTS = [
-  { id: 'bank-1', bankName: 'State Bank of India', accountHolder: 'Ram Kishore & Sons', accountNo: 'XXXX4821', ifsc: 'SBIN0001234', branch: 'Civil Lines', balance: 324800, incomingPayments: 118000, outgoingPayments: 84500, pendingTransfers: 2, recentTransactions: ['NEFT from Gupta & Sons - 10,000', 'Salary transfer - 65,000'], transfers: ['Main to petty cash - 15,000', 'Customer refund - 4,500'] },
-  { id: 'bank-2', bankName: 'HDFC Bank', accountHolder: 'Ram Kishore & Sons', accountNo: 'XXXX7830', ifsc: 'HDFC0007788', branch: 'Prayagraj Main', balance: 128400, incomingPayments: 54000, outgoingPayments: 31000, pendingTransfers: 1, recentTransactions: ['UPI collection - 12,000', 'Vendor payment - 18,500'], transfers: ['Transfer to SBI - 25,000'] },
-]
+export const SAMPLE_BANK_ACCOUNTS = async () => {
+  const response = await fetch("/api/Bank", {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.message || "Failed to fetch bank accounts"
+    );
+  }
+
+  return (result.data ?? [])
+    .filter(Boolean)
+    .map((bank) => ({
+      id: String(bank._id ?? bank.id),
+
+      bankName: bank.bankName ?? "",
+      accountHolder: bank.accountHolder ?? "",
+      accountNo: bank.accountNo ?? "",
+      ifsc: bank.ifsc ?? "",
+      branch: bank.branch ?? "",
+      accountType: bank.accountType ?? "",
+
+      openingBalance: Number(bank.openingBalance ?? 0),
+      currentBalance: Number(bank.currentBalance ?? 0),
+
+      createdAt: bank.createdAt ?? null,
+      updatedAt: bank.updatedAt ?? null,
+    }));
+};
+// [
+//   { id: 'bank-1', bankName: 'State Bank of India', accountHolder: 'Ram Kishore & Sons', accountNo: 'XXXX4821', ifsc: 'SBIN0001234', branch: 'Civil Lines', balance: 324800, incomingPayments: 118000, outgoingPayments: 84500, pendingTransfers: 2, recentTransactions: ['NEFT from Gupta & Sons - 10,000', 'Salary transfer - 65,000'], transfers: ['Main to petty cash - 15,000', 'Customer refund - 4,500'] },
+//   { id: 'bank-2', bankName: 'HDFC Bank', accountHolder: 'Ram Kishore & Sons', accountNo: 'XXXX7830', ifsc: 'HDFC0007788', branch: 'Prayagraj Main', balance: 128400, incomingPayments: 54000, outgoingPayments: 31000, pendingTransfers: 1, recentTransactions: ['UPI collection - 12,000', 'Vendor payment - 18,500'], transfers: ['Transfer to SBI - 25,000'] },
+// ]
 
 export const SAMPLE_CASH_TRANSACTIONS = [
   { id: 'cash-1', date: '2026-05-12', narration: 'Opening Balance', type: 'Opening', amount: 45200, flow: 'In' },

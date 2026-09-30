@@ -7,15 +7,18 @@ import { BANKING_DEFINITIONS } from '@/data/erpModules.js'
 import { Card, CardBody, CardHead, FormGrid, Input, KpiCard, Modal, PageHeader, Select, Table, Textarea } from '@/components/frontendUi/index.js'
 import Button from '@/components/frontendUi/Button.jsx'
 import { fmt, fmtShort, todayISO } from '@/utils/helpers.js'
+import { INDIAN_BANKS } from "@/utils/banks"
 
+const ACCOUNT_TYPE = ['Savings Account', 'Current Account', 'Fixed Deposit', 'Recurring Deposit', 'NRI Account', 'Demat Account', 'Other']
 
 export default function BankingModulePage() {
   const { moduleId } = useParams()
   const router = useRouter()
-  const { loans, checks, bankAccounts, cashTransactions, upsertLoan, deleteLoan, upsertBankAccount, deleteBankAccount } = useApp()
+  const { loans, checks, bankAccounts, cashTransactions, updateLoan, upsertLoan, deleteLoan, upsertBankAccount, deleteBankAccount, refreshBankingData } = useApp()
   const module = BANKING_DEFINITIONS.find((entry) => entry.id === moduleId)
   const [editor, setEditor] = useState(null)
   if (!module) return null
+
 
   if (moduleId === 'loan-accounts') {
     return (
@@ -45,7 +48,19 @@ export default function BankingModulePage() {
             rows={loans}
           />
         </Card>
-        <LoanEditorModal value={editor} onClose={() => setEditor(null)} onSave={(payload) => { upsertLoan(payload); setEditor(null) }} />
+        <LoanEditorModal
+          value={editor}
+          onClose={() => setEditor(null)}
+          onSave={(form) => {
+            if (form.id) {
+              updateLoan(form.id, form)
+            } else {
+              upsertLoan(form)
+            }
+
+            setEditor(null)
+          }}
+        />
       </div>
     )
   }
@@ -71,12 +86,12 @@ export default function BankingModulePage() {
   if (moduleId === 'bank-accounts') {
     return (
       <div className="animate-slide">
-        <PageHeader title="Bank Accounts" sub="Balances, IFSC, branch, transactions and transfer records." right={<Button variant="primary" onClick={() => setEditor({ id: '', bankName: '', accountHolder: '', accountNo: '', ifsc: '', branch: '', balance: 0, incomingPayments: 0, outgoingPayments: 0, pendingTransfers: 0, recentTransactions: [], transfers: [] })}>+ Add Bank Account</Button>} />
+        <PageHeader title="Bank Accounts" sub="Balances, IFSC, branch, transactions and transfer records." right={<Button variant="primary" onClick={() => setEditor({ bankName: 'State Bank of India', accountHolder: '', accountNo: '', ifsc: '', branch: '', accountType: 'Savings Account', openingBalance: 0, currentBalance: 0, incomingPayments: 0, outgoingPayments: 0, pendingTransfers: 0, recentTransactions: [], transfers: [] })}>+ Add Bank Account</Button>} />
         <SummaryStrip values={[
-          ['Total Bank Balance', fmtShort(bankAccounts.reduce((sum, row) => sum + row.balance, 0))],
-          ['Incoming Payments', fmtShort(bankAccounts.reduce((sum, row) => sum + row.incomingPayments, 0))],
-          ['Outgoing Payments', fmtShort(bankAccounts.reduce((sum, row) => sum + row.outgoingPayments, 0))],
-          ['Pending Transfers', bankAccounts.reduce((sum, row) => sum + row.pendingTransfers, 0)],
+          ['Total Bank Balance', fmtShort(bankAccounts.reduce((sum, row) => sum + (Number(row.currentBalance) || 0), 0))],
+          ['Incoming Payments', fmtShort(bankAccounts.reduce((sum, row) => sum + (Number(row.incomingPayments) || 0), 0))],
+          ['Outgoing Payments', fmtShort(bankAccounts.reduce((sum, row) => sum + (Number(row.outgoingPayments) || 0), 0))],
+          ['Pending Transfers', bankAccounts.reduce((sum, row) => sum + (Number(row.pendingTransfers) || 0), 0)],
         ]}
         />
         <Card>
@@ -89,7 +104,7 @@ export default function BankingModulePage() {
               { key: 'accountNo', label: 'Account', mono: true },
               { key: 'ifsc', label: 'IFSC', mono: true },
               { key: 'branch', label: 'Branch', dim: true },
-              { key: 'balance', label: 'Current Balance', right: true, render: (value) => fmt(value) },
+              { key: 'currentBalance', label: 'Current Balance', right: true, render: (value) => fmt(value) },
               { key: '_act', label: '', sortable: false, render: (_, row) => <ActionCell onEdit={() => setEditor(row)} onDelete={() => deleteBankAccount(row.id)} /> },
             ]}
             rows={bankAccounts}
@@ -160,6 +175,41 @@ function LoanEditorModal({ value, onClose, onSave }) {
 
 function LoanEditorForm({ initialValue, onClose, onSave }) {
   const [form, setForm] = useState(initialValue)
+  const toast = useToast()
+
+  const loanSave = async () => {
+    try {
+      const response = await fetch("/api/Loan", {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(form),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to save loan');
+      }
+      // Update parent state
+      onSave?.(result.data);
+      toast(`${result.data.name} added`, "success");
+      // Close editor
+      onClose();
+      // Update local form if needed
+      setForm(result.data);
+
+
+    } catch (error) {
+      console.error("Add loan error:", error)
+
+      toast(
+        error?.message || "Failed to add loan",
+        "error"
+      )
+    }
+  }
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <FormGrid cols={2}>
@@ -173,7 +223,7 @@ function LoanEditorForm({ initialValue, onClose, onSave }) {
       <Textarea label="Reminder" value={form.reminder} onChange={(event) => setForm((current) => ({ ...current, reminder: event.target.value }))} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" onClick={() => onSave(form)}>Save Loan</Button>
+        <Button variant="primary" onClick={loanSave}>Save Loan</Button>
       </div>
     </div>
   )
@@ -197,7 +247,7 @@ function ActionCell({ onEdit, onDelete }) {
       <Button size="sm" variant="ghost" tabIndex={-1} onClick={(event) => { event.stopPropagation(); onDelete() }}>Delete</Button>
     </div>
   )
-} 
+}
 
 function BankEditorModal({ value, onClose, onSave }) {
   if (!value) return null
@@ -213,12 +263,14 @@ function BankEditorForm({ initialValue, onClose, onSave }) {
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <FormGrid cols={2}>
-        <Input label="Bank Name" value={form.bankName} onChange={(event) => setForm((current) => ({ ...current, bankName: event.target.value }))} />
+        <Select label="Bank Name" value={form.bankName} onChange={(event) => setForm((current) => ({ ...current, bankName: event.target.value }))} options={INDIAN_BANKS} />
         <Input label="Account Holder" value={form.accountHolder} onChange={(event) => setForm((current) => ({ ...current, accountHolder: event.target.value }))} />
         <Input label="Account Number" value={form.accountNo} onChange={(event) => setForm((current) => ({ ...current, accountNo: event.target.value }))} />
         <Input label="IFSC" value={form.ifsc} onChange={(event) => setForm((current) => ({ ...current, ifsc: event.target.value }))} />
         <Input label="Branch" value={form.branch} onChange={(event) => setForm((current) => ({ ...current, branch: event.target.value }))} />
-        <Input label="Current Balance" type="number" value={form.balance} onChange={(event) => setForm((current) => ({ ...current, balance: Number(event.target.value) }))} />
+        <Select label="Account Type" value={form.accountType} onChange={(event) => setForm((current) => ({ ...current, accountType: event.target.value }))} options={ACCOUNT_TYPE} />
+        <Input label="Opening balance" type='number' value={form.openingBalance ?? ''} onChange={(event) => setForm((current) => ({ ...current, openingBalance:event.target.value === ''? '' : Number(event.target.value) }))} />
+        <Input label="Current Balance" type='number' value={form.currentBalance ?? ''}  onChange={(event) => setForm((current) => ({ ...current, currentBalance:event.target.value === ''? '' : Number(event.target.value) }))} />
       </FormGrid>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
         <Button variant="ghost" onClick={onClose}>Cancel</Button>

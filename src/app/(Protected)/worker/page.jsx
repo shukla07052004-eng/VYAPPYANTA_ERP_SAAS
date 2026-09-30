@@ -23,7 +23,7 @@ import useFocusZone from "@/hooks/useFocusZone"
 
 
 export default function WorkersPage() {
-  const { workers, paySalary } = useApp()
+  const { workers, paySalary, deleteWorker } = useApp()
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({
@@ -91,7 +91,7 @@ export default function WorkersPage() {
       }
 
       const payload = {
-        fullName: name,
+        Name: form.name,
         Role: form.role.trim(),
         Phone: form.phone.trim(),
         Salary: Number(form.salary) || 0,
@@ -270,6 +270,7 @@ export default function WorkersPage() {
                 style={{
                   width: "100%",
                   justifyContent: "center",
+                  margin: '2px',
                 }}
                 onClick={() => {
                   if (worker.paid) return
@@ -286,6 +287,18 @@ export default function WorkersPage() {
                 {worker.paid
                   ? "Paid"
                   : "Pay Salary"}
+              </Button>
+              <Button
+                size="sm" variant="secondary"
+                tabIndex={-1}
+                style={{
+                  width: "100%",
+                  justifyContent: "center",
+                  margin: '2px',
+                }}
+                onClick={e => { e.stopPropagation(); deleteWorker(worker.id) }}
+              >
+                Delete Worker
               </Button>
 
             </CardBody>

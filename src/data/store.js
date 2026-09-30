@@ -292,7 +292,7 @@ export async function INIT_PARTIES() {
 
   if (!response.ok || !result.success) {
     throw new Error(
-      result.message || "Failed to fetch parties"
+        
     );
   }
 
@@ -319,13 +319,39 @@ export async function INIT_PURCHASES() {
     .filter(Boolean)
 }
 
-export const INIT_EXPENSES = [
-  { id: 1, category: 'Rent', desc: 'Shop rent – April 2025', amount: 15000, date: '01 Apr 2025', mode: 'Bank' },
-  { id: 2, category: 'Electricity', desc: 'March electricity bill', amount: 4200, date: '02 Apr 2025', mode: 'UPI' },
-  { id: 3, category: 'Transport', desc: 'Delivery charges', amount: 8600, date: '02 Apr 2025', mode: 'Cash' },
-  { id: 4, category: 'Salaries', desc: 'Staff advance – April', amount: 12500, date: '01 Apr 2025', mode: 'Cash' },
-  { id: 5, category: 'Misc', desc: 'Stationery & supplies', amount: 800, date: '03 Apr 2025', mode: 'Cash' },
-]
+export async function INIT_EXPENSES() { 
+  const response = await fetch('/api/Expense',{
+    method: 'GET',
+    cache: "no-store",
+  })
+
+  const result = await response.json();
+
+  if(!response.ok || !result.success) {
+    throw new Error(result.message || "Failed to fetch expenses")
+  }
+
+  return (result.data ?? []).map((expenses) => ({
+    id: String(expenses._id ?? expenses.id ?? ""),
+
+    name: expenses.title ?? "",
+    desc: expenses.title ?? "",
+    category: expenses.category ?? "",
+    amount: Number(expenses.amount ?? 0),
+    date: expenses.date.split('T')[0]  ?? "",
+
+    paymentMode: expenses.mode ?? 'Cash',
+    notes: expenses.notes ?? '',
+  }))
+
+
+  // { id: 1, category: 'Rent', desc: 'Shop rent – April 2025', amount: 15000, date: '01 Apr 2025', mode: 'Bank' },
+  // { id: 2, category: 'Electricity', desc: 'March electricity bill', amount: 4200, date: '02 Apr 2025', mode: 'UPI' },
+  // { id: 3, category: 'Transport', desc: 'Delivery charges', amount: 8600, date: '02 Apr 2025', mode: 'Cash' },
+  // { id: 4, category: 'Salaries', desc: 'Staff advance – April', amount: 12500, date: '01 Apr 2025', mode: 'Cash' },
+  // { id: 5, category: 'Misc', desc: 'Stationery & supplies', amount: 800, date: '03 Apr 2025', mode: 'Cash' },
+
+}
 
 export const CASH_ENTRIES = [
   { date: '01 Apr', narration: 'Opening Balance', credit: 45200, debit: 0 },
@@ -363,7 +389,7 @@ export async function INIT_WORKERS() {
   return (result.data ?? []).map((worker) => ({
     id: String(worker._id ?? worker.id ?? ""),
 
-    name: worker.fullName ?? "",
+    name: worker.Name ?? "",
     role: worker.Role ?? "",
     phone: worker.Phone ?? "",
     salary: Number(worker.Salary ?? 0),
@@ -373,16 +399,6 @@ export async function INIT_WORKERS() {
     advance: Number(worker.advance ?? 0),
   }))
 }
-
-
-
-// export const INIT_WORKERS = [
-//   { id: 1, name: 'Rakesh Kumar', role: 'Store Manager', phone: '9876501234', salary: 18000, join: 'Jan 2022', attendance: 26, days: 26, paid: false, advance: 0 },
-//   { id: 2, name: 'Sunita Devi', role: 'Accountant', phone: '9765401234', salary: 14000, join: 'Mar 2023', attendance: 25, days: 26, paid: true, advance: 2000 },
-//   { id: 3, name: 'Mohit Yadav', role: 'Salesman', phone: '9654312340', salary: 12000, join: 'Jun 2023', attendance: 24, days: 26, paid: false, advance: 0 },
-//   { id: 4, name: 'Priya Singh', role: 'Data Entry', phone: '9543212345', salary: 10000, join: 'Sep 2023', attendance: 26, days: 26, paid: false, advance: 0 },
-//   { id: 5, name: 'Anil Gupta', role: 'Driver', phone: '9432123456', salary: 11000, join: 'Feb 2024', attendance: 22, days: 26, paid: false, advance: 500 },
-// ]
 export const BACKUPS = [
   { date: '04 Apr 09:00', size: '12.4 MB', type: 'Auto', status: 'OK' },
   { date: '03 Apr 23:00', size: '12.1 MB', type: 'Auto', status: 'OK' },
@@ -405,7 +421,7 @@ export function getDefaultErpState() {
 
     parties: [],
     purchases: [],
-    expenses: structuredCloneSafe(INIT_EXPENSES),
+    expenses: [],
     workers: [],
 
     items: [],
@@ -465,11 +481,13 @@ export async function initializeErpData() {
     parties,
     purchases,
     workers,
+    expenses,
   ] = await Promise.all([
     INIT_INVOICES(),
     INIT_PARTIES(),
     INIT_PURCHASES(),
     INIT_WORKERS(),
+    INIT_EXPENSES(),
   ])
 
   const cached = loadErpState()
@@ -480,6 +498,7 @@ export async function initializeErpData() {
     parties,
     purchases,
     workers,
+    expenses
   }
 
   saveErpState(state)

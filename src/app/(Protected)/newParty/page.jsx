@@ -114,6 +114,7 @@ export default function PartyFormPage() {
 
     // 2. Build payload
     const payload = {
+      sr: form.partyCode,
       partyType: form.partyType,
       accountGroup: form.accountGroup,
 
@@ -121,7 +122,6 @@ export default function PartyFormPage() {
       partyCode: form.partyCode,
 
       gstin: form.gstin,
-      taxID: form.taxId,
 
       primaryContactName: form.primaryContactName,
       primaryContactRole: form.primaryContactRole,
@@ -395,7 +395,7 @@ export default function PartyFormPage() {
 
         <section className="erp-crm-card" aria-labelledby="crm-gst-title">
           <div className="erp-crm-card-title" id="crm-gst-title">GST registration</div>
-          <Input label="GSTIN / Tax ID" value={form.taxId} onChange={(event) => setField('taxId', event.target.value.toUpperCase())} inputClassName="erp-field" placeholder="15-character GSTIN" />
+          <Input label="GSTIN / Tax ID" value={form.gstin} onChange={(event) => setField('gstin', event.target.value.toUpperCase())} inputClassName="erp-field" placeholder="15-character GSTIN" />
         </section>
 
         <section className="erp-crm-card" aria-labelledby="crm-contact-title">
@@ -516,7 +516,7 @@ function createInitialForm(party) {
     phone: party?.phone || '',
     website: party?.website || '',
 
-    taxId: party?.taxID || '',
+    gstin: party?.gstin || '',
 
     billingAddress: {
       addressLine1: party?.address?.addressLine1 || '',
@@ -599,7 +599,7 @@ function createInitialFormEmpty() {
     email: '',
     phone: '',
     website: '',
-    taxId: '',
+    gstin: '',
 
     billingAddress: {
       addressLine1: '',
@@ -622,7 +622,7 @@ function createInitialFormEmpty() {
     latitude: '',
     longitude: '',
 
-    paymentTerms: '',
+    paymentTerms: 'Net 7',
     creditLimit: '',
     discountStructure: '',
     currency: '',

@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 import { Types } from "mongoose";
 
 export interface Worker extends Document {
-    fullName: string;
+    Name: string;
     Role: string;
     Phone: number;
     Salary: number;
@@ -13,7 +13,7 @@ export interface Worker extends Document {
 
 const WorkerSchema: Schema<Worker> = new Schema(
     {
-        fullName: {
+        Name: {
             type: String,
             required: true,
             trim: true,
@@ -36,15 +36,15 @@ const WorkerSchema: Schema<Worker> = new Schema(
             required: true
         },
         paid: {
-      type: Boolean,
-      default: false,
-    },
+            type: Boolean,
+            default: false,
+        },
 
-    advance: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+        advance: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
 
 
 

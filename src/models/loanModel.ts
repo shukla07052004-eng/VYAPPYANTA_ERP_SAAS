@@ -1,44 +1,44 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface Loan extends Document {
-    loanName: string;
-    Bank: string;
-    intrestRate: number;
-    EmiAmount: number;
-    DueDate:Date;
-    RemainingBal:number;
-    Reminder:string;
+    name: string;
+    institution: string;
+    interestRate: number;
+    emiAmount: number;
+    dueDate:Date;
+    remainingBalance:number;
+    reminder:string;
 }
 
 const LoanSchema: Schema<Loan> = new Schema(
     {
-        loanName:{
+        name:{
             type:String,
             required: true,
             trim: true,
             lowercase: true
         },        
-        Bank:{
+        institution:{
             type: String,
             required: true
         },
-        intrestRate:{
+        interestRate:{
             type:Number,
             required:true
         },
-        EmiAmount:{
+        emiAmount:{
             type:Number,
             required:true
         },
-        DueDate:{
+        dueDate:{
             type:Date,
             required:true
         },
-        RemainingBal:{
+        remainingBalance:{
             type:Number,
             required:true
         },
-        Reminder:{
+        reminder:{
             type:String,
             required:true
         },

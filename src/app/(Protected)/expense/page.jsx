@@ -52,7 +52,7 @@ function exportExpenseWorkbook(rows, summaryLabel) {
 }
 
 export default function ExpenseManagementPage() {
-  const { expenses, addExpense, invoices, purchases, parties, itemMaster } = useApp()
+  const { expenses, deleteExpense, invoices, purchases, parties, itemMaster } = useApp()
   const mounted = useHydration()
   const toast = useToast()
   const [open, setOpen] = useState(false)
@@ -106,33 +106,64 @@ export default function ExpenseManagementPage() {
     return Array.from(grouped.values()).sort((a, b) => b.amount - a.amount)
   }, [filteredExpenses])
 
-  const handleSave = () => {
-    if (!form.title.trim() || !form.amount) {
-      toast('Expense title and amount are required', 'error')
-      return
+  const handleSave = async () => {
+    try {
+      if (!form.title.trim() || !form.amount) {
+        toast('Expense title and amount are required', 'error')
+        return
+      }
+
+      const payload = {
+        title: form.title,
+        desc: form.title,
+        category: form.category,
+        amount: Number(form.amount) || 0,
+        mode: form.paymentMode,
+        notes: form.notes,
+        date: form.date,
+      }
+
+      const response = await fetch('/api/Expense', {
+        method: 'POST',
+        headers: {
+          'Content-Type': "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
+      let result
+
+      try {
+        result = await response.json()
+      } catch {
+        throw new Error(
+          `API returned an invalid response (${response.status})`
+        )
+      }
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message || "Failed to add expense"
+        )
+      }
+
+      toast('Expense added to daily register', 'success')
+      setOpen(false)
+      setForm({
+        title: '',
+        category: 'Electricity',
+        amount: '',
+        paymentMode: 'Cash',
+        notes: '',
+        date: todayISO(),
+      })
+    } catch (error) {
+      console.log("ADD EXPENSE error", error)
+
+      toast(
+        error?.message || "Failed to add EXPENSE",
+        "error  "
+      )
     }
-
-    addExpense({
-      title: form.title,
-      desc: form.title,
-      category: form.category,
-      amount: Number(form.amount) || 0,
-      paymentMode: form.paymentMode,
-      mode: form.paymentMode,
-      notes: form.notes,
-      date: form.date,
-    })
-
-    toast('Expense added to daily register', 'success')
-    setOpen(false)
-    setForm({
-      title: '',
-      category: 'Electricity',
-      amount: '',
-      paymentMode: 'Cash',
-      notes: '',
-      date: todayISO(),
-    })
   }
 
   return (
@@ -296,6 +327,20 @@ export default function ExpenseManagementPage() {
             { key: 'amount', label: 'Amount', right: true, render: (value) => <strong>{fmt(value || 0)}</strong> },
             { key: 'paymentMode', label: 'Payment Mode', render: (_, row) => row.paymentMode || row.mode || '-' },
             { key: 'notes', label: 'Notes', wrap: true, render: (value) => value || '-' },
+            {
+              key: '_act', label: '', sortable: false,
+              render: (_, row) => (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <Button
+                    size="sm" variant="secondary"
+                    tabIndex={-1}
+                    onClick={e => { e.stopPropagation(); deleteExpense(row.id) }}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              ),
+            },
           ]}
           rows={filteredExpenses}
           emptyMsg="No expenses found for the current filter."

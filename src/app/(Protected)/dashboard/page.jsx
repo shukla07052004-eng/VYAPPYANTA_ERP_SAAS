@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
@@ -59,6 +59,8 @@ export default function Dashboard() {
       }
     },
   })
+
+
 
   // Load targets only after client hydration to avoid mismatch
   useEffect(() => {
@@ -254,6 +256,8 @@ export default function Dashboard() {
     }
   };
 
+
+
   return (
     <div className="animate-slide">
       {viewPO && <PurchaseInvoiceView purchase={viewPO} onClose={() => setViewPO(null)} />}
@@ -445,69 +449,276 @@ function TargetEditorForm({ initialValue, onClose, onDelete, onSave }) {
     currentValue: String(initialValue.currentValue ?? 0),
   })
 
+  const formRefs = useRef([])
+
   const progress = computeTargetProgress({
     ...form,
     targetValue: Number(form.targetValue),
     currentValue: Number(form.currentValue),
   })
+
   const handleSubmit = async (event) => {
-    event.preventDefault();
+    event.preventDefault()
 
     const payload = {
       ...form,
       targetValue: Number(form.targetValue) || 0,
       currentValue: Number(form.currentValue) || 0,
-    };
+    }
 
-    await onSave(payload);
-  };
+    await onSave(payload)
+  }
+
+  const focusFormField = (index) => {
+    const element = formRefs.current[index]
+
+    if (element instanceof HTMLElement) {
+      requestAnimationFrame(() => {
+        element.focus({ preventScroll: true })
+      })
+    }
+  }
+
+  const handleFormKeyDown = (index) => (event) => {
+    if (event.key !== "Enter") return
+
+    // Don't interfere with Ctrl/Alt/Cmd + Enter
+    if (event.ctrlKey || event.altKey || event.metaKey) {
+      return
+    }
+
+    event.preventDefault()
+
+    // Shift + Enter = previous field
+    if (event.shiftKey) {
+      if (index > 0) {
+        focusFormField(index - 1)
+      }
+      return
+    }
+
+    // Enter on last field = save
+    if (index === 6) {
+      handleSubmit(event)
+      return
+    }
+
+    // Enter = next field
+    focusFormField(index + 1)
+  }
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12 }}>
 
-        <Input label="Target Name" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Monthly sales collection" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Input label="Target Value" type="number" value={form.targetValue} onChange={(event) => setForm((current) => ({ ...current, targetValue: event.target.value }))} />
-          <Input label="Current Progress" type="number" value={form.currentValue} onChange={(event) => setForm((current) => ({ ...current, currentValue: event.target.value }))} />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <Input label="Deadline" type="date" value={form.deadline} onChange={(event) => setForm((current) => ({ ...current, deadline: event.target.value }))} />
-          <Select label="Priority" value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))} options={TARGET_PRIORITY_OPTIONS} />
-        </div>
-        <Select
-          label="Status"
-          value={form.completed}
+        {/* 0 */}
+        <Input
+          label="Target Name"
+          value={form.title}
+          ref={(element) => {
+            formRefs.current[0] = element
+          }}
+          onKeyDown={handleFormKeyDown(0)}
           onChange={(event) =>
             setForm((current) => ({
               ...current,
-              completed: event.target.value
+              title: event.target.value,
             }))
           }
-          options={['Open', 'Completed']}
+          placeholder="Monthly sales collection"
         />
-        <Textarea label="Notes" rows={3} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Next follow-up or target details" />
 
-        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', padding: '10px 12px', display: 'grid', gap: 5 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12 }}>
-            <span style={{ color: 'var(--ink-40)' }}>Progress</span>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 12,
+          }}
+        >
+          {/* 1 */}
+          <Input
+            label="Target Value"
+            type="number"
+            value={form.targetValue}
+            ref={(element) => {
+              formRefs.current[1] = element
+            }}
+            onKeyDown={handleFormKeyDown(1)}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                targetValue: event.target.value,
+              }))
+            }
+          />
+
+          {/* 2 */}
+          <Input
+            label="Current Progress"
+            type="number"
+            value={form.currentValue}
+            ref={(element) => {
+              formRefs.current[2] = element
+            }}
+            onKeyDown={handleFormKeyDown(2)}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                currentValue: event.target.value,
+              }))
+            }
+          />
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 12,
+          }}
+        >
+          {/* 3 */}
+          <Input
+            label="Deadline"
+            type="date"
+            value={form.deadline}
+            ref={(element) => {
+              formRefs.current[3] = element
+            }}
+            onKeyDown={handleFormKeyDown(3)}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                deadline: event.target.value,
+              }))
+            }
+          />
+
+          {/* 4 */}
+          <Select
+            label="Priority"
+            value={form.priority}
+            ref={(element) => {
+              formRefs.current[4] = element
+            }}
+            onKeyDown={handleFormKeyDown(4)}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                priority: event.target.value,
+              }))
+            }
+            options={TARGET_PRIORITY_OPTIONS}
+          />
+        </div>
+
+        {/* 5 */}
+        <Select
+          label="Status"
+          value={form.completed}
+          ref={(element) => {
+            formRefs.current[5] = element
+          }}
+          onKeyDown={handleFormKeyDown(5)}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              completed: event.target.value,
+            }))
+          }
+          options={COMPLETED_OPTIONS}
+        />
+
+        {/* 6 */}
+        <Textarea
+          label="Notes"
+          rows={3}
+          value={form.notes}
+          ref={(element) => {
+            formRefs.current[6] = element
+          }}
+          onKeyDown={handleFormKeyDown(6)}
+          onChange={(event) =>
+            setForm((current) => ({
+              ...current,
+              notes: event.target.value,
+            }))
+          }
+          placeholder="Next follow-up or target details"
+        />
+
+        <div
+          style={{
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--r-md)',
+            background: 'var(--surface-2)',
+            padding: '10px 12px',
+            display: 'grid',
+            gap: 5,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 8,
+              fontSize: 12,
+            }}
+          >
+            <span style={{ color: 'var(--ink-40)' }}>
+              Progress
+            </span>
+
             <strong>{progress}%</strong>
           </div>
-          <div style={{ height: 7, borderRadius: 999, background: '#e9e9e9', overflow: 'hidden' }}>
-            <div style={{ width: `${progress}%`, height: '100%', background: '#111827', borderRadius: 999 }} />
+
+          <div
+            style={{
+              height: 7,
+              borderRadius: 999,
+              background: '#e9e9e9',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: `${progress}%`,
+                height: '100%',
+                background: '#111827',
+                borderRadius: 999,
+              }}
+            />
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 10,
+          }}
+        >
           <div>
             {initialValue._id && (
-              <Button variant="danger" onClick={() => onDelete(initialValue._id)}>
+              <Button
+                variant="danger"
+                type="button"
+                onClick={() => onDelete(initialValue._id)}
+              >
                 Delete Target
               </Button>
             )}
           </div>
+
           <div style={{ display: 'flex', gap: 10 }}>
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+
             <Button
               variant="primary"
               type="submit"
@@ -517,6 +728,7 @@ function TargetEditorForm({ initialValue, onClose, onDelete, onSave }) {
             </Button>
           </div>
         </div>
+
       </form>
     </div>
   )
