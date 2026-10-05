@@ -3,7 +3,7 @@
 // Reusable across all GST report sections
 // ============================================================
 import React, { useState } from 'react'
-import { fmtRs, fmtDate } from '../../utils/gstEngine.js'
+import { fmtRs, fmtDate } from '@/utils/gstEngine.js'
 
 // ── Style tokens ─────────────────────────────────────────────
 export const S = {

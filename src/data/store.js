@@ -235,6 +235,7 @@ export function normalizeParty(party, index = 0) {
   };
 }
 
+// this is mainly for gst initialization and other business details
 export const BUSINESS = {
   name: 'Ram Kishore & Sons',
   gstin: '09ABCDE1234F1Z5',

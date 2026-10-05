@@ -8,8 +8,8 @@ import {
   fmtRs, fmtDate, buildHSNSummary, buildPartyWiseGST, buildGSTR1, buildGSTR3B,
   exportBillwiseGSTCSV, exportGSTR1CSV, exportHSNCSV, exportPartyCSV,
   exportPlainTextReport, round2,
-} from '../../utils/gstEngine.js'
-import { BUSINESS } from '../../data/store.js'
+} from '@/utils/gstEngine.js'
+import { BUSINESS } from '@/data/store.js'
 import {
   S, GSTCardHead, GSTTableWrapper, GSTFilters, GSTFilterField,
   SupplyBadge, InvoiceTypeBadge, RCMBadge, ExportButtons,

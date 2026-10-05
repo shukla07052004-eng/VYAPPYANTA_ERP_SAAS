@@ -14,6 +14,8 @@ export default function useFocusList({
   onEnter,
   onEscape,
   onActiveIndexChange,
+  onLeaveBackward,
+  onLeaveForward,
 } = {}) {
   const itemRefs = useRef([]);
   const [currentIndex, setCurrentIndexState] = useState(
@@ -269,14 +271,33 @@ export default function useFocusList({
            */
 
           if (orientation === "vertical") {
+
             if (event.key === "ArrowDown") {
               event.preventDefault();
+
+              if (currentIndex === count - 1) {
+                const handled = onLeaveForward?.(event, currentIndex);
+
+                if (handled !== false) {
+                  return;
+                }
+              }
+
               move(1);
               return;
             }
 
             if (event.key === "ArrowUp") {
               event.preventDefault();
+
+              if (currentIndex === 0) {
+                const handled = onLeaveBackward?.(event, currentIndex);
+
+                if (handled !== false) {
+                  return;
+                }
+              }
+
               move(-1);
               return;
             }

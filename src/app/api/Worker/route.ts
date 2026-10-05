@@ -2,35 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/dbconnect";
 import { Worker } from "@/models/workerModel"
 
-export async function GET() {
-  try {
-    await connectDB()
-
-    const workers = await Worker.find({}).sort({ createdAt: -1 })
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: workers,
-      },
-      { status: 200 }
-    )
-  } catch (error) {
-    console.error("Failed to fetch workers:", error)
-
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch workers",
-      },
-      { status: 500 }
-    )
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
     await connectDB()
@@ -138,3 +109,29 @@ export async function POST(req: NextRequest) {
     )
   }
 }
+export async function GET() {
+  try {
+    await connectDB()
+    const workers = await Worker.find({}).sort({ createdAt: -1 })
+    return NextResponse.json(
+      {
+        success: true,
+        data: workers,
+      },
+      { status: 200 }
+    )
+  } catch (error) {
+    console.error("Failed to fetch workers:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch workers",
+      },
+      { status: 500 }
+    )
+  }
+}
+
