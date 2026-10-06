@@ -90,20 +90,23 @@ export default function GSTReportsPage() {
   const handleBack = () => {
     router.push('/reports')
   }
-  const sidebarFocus = useKeyboardListNavigation({
+  const {
+    attach: sidebarFocusRef,
+    focusItem: focusSidebarItem,
+  } = useKeyboardListNavigation({
     orientation: 'vertical',
     onSelect: (_, index) => setActive(NAV_ITEMS[index]?.id ?? 'dashboard'),
-    onLeaveForward: () => {
-      const contentFocused = contentFocus.focusFirst()
-      return contentFocused
-    },
+    onLeaveForward: () => focusContentFirst(),
   })
-  const contentFocus = useKeyboardListNavigation({
+  const {
+    attach: contentFocusRef,
+    focusFirst: focusContentFirst,
+  } = useKeyboardListNavigation({
     orientation: 'vertical',
     selector: '[data-focus-item="true"]',
     onLeaveBackward: () => {
       const index = NAV_ITEMS.findIndex((item) => item.id === active)
-      return sidebarFocus.focusItem(index >= 0 ? index : 0)
+      return focusSidebarItem(index >= 0 ? index : 0)
     },
     onEscape: () => {
       handleBack()
@@ -164,13 +167,13 @@ export default function GSTReportsPage() {
         sidebarFocus.focusItem(index >= 0 ? index : 0)
       }
     })
-  }, [active, sidebarFocus.focusItem])
+  }, [active, focusSidebarItem])
 
   useEffect(() => {
     requestAnimationFrame(() => {
-      contentFocus.refresh(0)
+      focusContentFirst()
     })
-  }, [active, contentFocus.refresh])
+  }, [active, focusContentFirst])
 
   // ── Render active section ─────────────────────────────────
   const renderSection = () => {
@@ -192,8 +195,8 @@ export default function GSTReportsPage() {
 
       {/* ── Left Sidebar Nav ──────────────────────────── */}
       <aside style={{
-        width: '88vw',
-        height: 80,
+        width: '89vw',
+        height: 160,
         flexShrink: 0,
         background: '#0f0f0f',
         paddingTop: 8,
@@ -205,20 +208,21 @@ export default function GSTReportsPage() {
       }}>
         {/* GST module header */}
         <div style={{ padding: '16px', borderLeft: '1px solid rgba(255,255,255,.07)', margin: '0 8px' }} >
-            
-          <button onClick={handleBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none',  border: '1px solid rgba(5, 1, 1, 0.12)', borderRadius: 'var(--r-sm)', padding: '5px 10px', cursor: 'pointer', color: 'rgba(11, 10, 10, 0.79)', fontSize: 15, fontFamily: 'var(--font)',}}>
-                ← Reports
-            </button>
-        </div>
-        <div style={{ padding: '16px', borderLeft: '1px solid rgba(255,255,255,.07)', margin: '0 8px' }} >
-            
+          <button onClick={handleBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid rgba(255,255,255,.12)', borderRadius: 'var(--r-sm)', padding: '5px 10px', cursor: 'pointer', color: 'rgba(255,255,255,.45)', fontSize: 12, fontFamily: 'var(--font)', marginBottom: 10 }}>
+            ← Reports
+          </button>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', letterSpacing: '-.4px' }}>GST Reports</div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,.35)', marginTop: 2 }}>FY {BUSINESS.fy}</div>
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(255,255,255,.07)', margin: '0 0 8px' }} />
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,.2)', marginBottom: 2 }}>SELLER GSTIN</div>
+
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.4)', letterSpacing: '.04em' }}>{sellerGSTIN}</div>
         </div>
 
         {/* Status pills */}
         <div style={{ padding: '0 16px 16px' }}>
-          <div style={{ display: 'flex', padding: '8px',paddingTop: '16px', flexDirection: 'row', gap: 6 }}>
+          <div style={{ display: 'flex', padding: '8px', paddingTop: '16px', flexDirection: 'row', gap: 6 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,.05)', borderRadius: 6, padding: '8px 12px' }}>
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>Output GST:</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#93c5fd', fontFamily: 'var(--mono)' }}>{fmtRs(outputTotals.totalGST)}</span>
@@ -227,18 +231,15 @@ export default function GSTReportsPage() {
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)' }}>ITC:</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: '#86efac', fontFamily: 'var(--mono)' }}>{fmtRs(itcData.itcTotal)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(185,28,28,.15)', border: '1px solid rgba(185,28,28,.25)', borderRadius: 6, padding: '8px 12px' }}>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 600 }}>Net Payable:</span>
-              <span style={{ fontSize: 12, fontWeight: 800, color: '#fca5a5', fontFamily: 'var(--mono)' }}>{fmtRs(netGST.netTotal)}</span>
-            </div>
+          </div>
+          <div style={{ display: 'flex', width: 215, background: 'rgba(185,28,28,.15)', border: '1px solid rgba(185,28,28,.25)', borderRadius: 6, padding: '8px 12px', marginLeft: 9 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 600 }}>Net Payable:</span>
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#fca5a5', fontFamily: 'var(--mono)' }}>{fmtRs(netGST.netTotal)}</span>
           </div>
         </div>
 
-        {/* Divider */}
-        <div style={{ height: 1, background: 'rgba(255,255,255,.07)', margin: '0 0 8px' }} />
-
         {/* Nav items */}
-        <nav id="gst-sidebar-nav" ref={sidebarFocus.ref} style={{ padding: '0 10px', width:360 }}>
+        <nav id="gst-sidebar-nav" ref={sidebarFocusRef} style={{ padding: '0 10px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
           {NAV_ITEMS.map((item, index) => {
             const isActive = active === item.id
             return (
@@ -253,11 +254,6 @@ export default function GSTReportsPage() {
           })}
         </nav>
 
-        {/* Footer GSTIN */}
-        <div style={{ padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,.07)' }}>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,.2)', marginBottom: 2 }}>SELLER GSTIN</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'rgba(255,255,255,.4)', letterSpacing: '.04em' }}>{sellerGSTIN}</div>
-        </div>
       </aside>
 
       {/* ── Main Content Area ─────────────────────────── */}
@@ -278,7 +274,7 @@ export default function GSTReportsPage() {
         </div>
 
         {/* Content */}
-        <div id="gst-content-zone" ref={contentFocus.ref} style={{ padding: '24px 28px' }}>
+        <div id="gst-content-zone" ref={contentFocusRef} style={{ padding: '24px 28px' }}>
           {renderSection()}
         </div>
       </main>
@@ -300,6 +296,7 @@ function SideNavItem({ item, active, onClick, index }) {
       onMouseLeave={() => setHov(false)}
       style={{
         width: '100%',
+        height: 40,
         display: 'flex',
         alignItems: 'center',
         gap: 10,

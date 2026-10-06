@@ -12,7 +12,7 @@ export default function Table({
 }) {
   const [sortKey, setSortKey] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
-  const focusZone = useKeyboardListNavigation({
+  const { attach: focusZoneRef } = useKeyboardListNavigation({
     orientation: 'vertical',
     onSelect: (_, index) => onRowClick?.(sorted[index]),
   })
@@ -47,7 +47,7 @@ export default function Table({
   return (
     <div
       id={focusId}
-      ref={focusZone.ref}
+      ref={focusZoneRef}
       style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
     >
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
