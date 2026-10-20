@@ -210,6 +210,7 @@ function Sidebar({
       tools: 'M13.5 5.5a3 3 0 0 0 4 4L12 15l-3-1-1-3 5.5-5.5zm-6 7L5 15l-1.5-.5L3 13l2.5-2.5',
       keyboard: 'M4 7.5h16v9H4zm2.5 2.5h1.5m2 0h1.5m2 0H15m2 0h1.5M6.5 13h9',
       grid: 'M5 5h6v6H5zm8 0h6v6h-6zM5 13h6v6H5zm8 0h6v6h-6z',
+      gst: 'M4.5 4.5h15v15h-15zm3 4h9m-9 3.5h9m-9 3.5h5m3-3.5v7m-3.5-3.5h7',
     }
 
     return (

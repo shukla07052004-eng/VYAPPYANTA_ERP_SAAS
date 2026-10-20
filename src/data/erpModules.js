@@ -6,7 +6,6 @@ export const REPORT_MENU_ITEMS = [
   { id: 'party-ledger-reports', path: '/reports/party-ledger', label: 'Party Ledger', reportId: 'party-ledger' },
   { id: 'expense-reports', path: '/reports/expenses', label: 'Expense Analysis', reportId: 'expenses' },
   { id: 'stock-reports', path: '/reports/stock', label: 'Stock Report', reportId: 'stock' },
-  { id: 'gst-reports', path: '/reports/gst', label: 'GST Reports', reportId: 'gst' },
   { id: 'billwise-reports', path: '/reports/billwise', label: 'Bill-wise Profit', reportId: 'billwise' },
 ]
 export const BANKING_DEFINITIONS = [
@@ -30,6 +29,7 @@ export const ERP_SIDEBAR_ITEMS = [
   { id: 'dues', path: '/duepage', label: 'Dues', icon: 'wallet' },
   { id: 'worker', path: '/worker', label: 'Workers', icon: 'parties' },
   { id: 'expense', path: '/expense', label: 'Expenses', icon: 'wallet' },
+    { id: 'gst-reports', path: '/gst', label: 'GST', icon: 'gst' },
   { id: 'reports', path: '/reports', label: 'Reports', icon: 'analytics', children: REPORT_MENU_ITEMS },
   // { id: 'ai-intelligence', label: 'AI Intelligence', icon: 'spark', children: AI_INTELLIGENCE_CHILDREN },
   {
