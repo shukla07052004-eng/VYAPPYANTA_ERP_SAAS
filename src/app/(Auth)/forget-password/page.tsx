@@ -26,11 +26,12 @@ export default function forgetPassword() {
   const [identifier, setIdentifier] = useState(""); // email OR username
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("")
+  const [resetToken, setResetToken] = useState("")
   const [validCode, setValidCode] = useState("")
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activePage, setActivePage] = useState("user");
+  const [activePage, setActivePage] = useState("Email");
   const [success, setSuccess] = useState<string | null>(null);
   const [result, setResult] = useState("");
 
@@ -42,7 +43,10 @@ export default function forgetPassword() {
   }
 
 
-  async function handleSubmit(e: any) {
+
+  async function handleEmailSubmit(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
 
     setError(null);
@@ -50,44 +54,108 @@ export default function forgetPassword() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("/api/validCode", {
+      const res = await fetch("/api/Email_verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           identifier,
-          validCode,
-          password
         }),
       });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || "Could not send verification code.");
+        return;
+      }
+      // Move to the code-entry screen only after API success
+      setActivePage("Code");
+      setSuccess(
+        "Verification code sent! Please check your email."
+      );
+    } catch (error) {
+      setError(
+        "Could not reach the server. Please check your connection."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  async function handleCodeSubmit(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
 
-      if (!res.ok) {
-        setError("Verification failed. Please try again.");
-        setIsLoading(false);
+    if (validCode.length !== 6) {
+      setError("Please enter the complete 6-digit code.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/Code_verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, validCode }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success || !data.resetToken) {
+        setError(data.message || "Invalid or expired code.");
         return;
       }
 
-      setSuccess(
-        "Code Verified! Redirecting to login..."
-      );
-
-      router.push("/sign-in");
-
+      setResetToken(data.resetToken);
+      setActivePage("password");
+      setValidCode("");
+      setSuccess("Code verified successfully!");
     } catch {
-      setError("Could not reach the server. Please check your connection.");
+      setError("Could not reach the server.");
+    } finally {
       setIsLoading(false);
     }
-
   }
+  async function handlePasswordSubmit(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
+    e.preventDefault();
+
+    const res = await fetch("/api/NewPassword", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        resetToken,  // Saved from Step 2
+        password: password, // Entered in Step 3
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data.success) {
+      setError(data.message || "Invalid OTP");
+      return;
+    }
+
+    router.push("/sign-in");
+  }
+
 
   const compareNumbers = () => {
     if (password !== confirm) {
-     setResult("Wrong Password") ;
-    } else{
-      setResult("Password Changed successfully ")
-      router.push("/sign-in")
-  }
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
   };
 
   return (
@@ -97,111 +165,132 @@ export default function forgetPassword() {
         <StarsBackground />
       </div>
 
+
       <div className="relative michroma-regular z-10 mt-4 mx-auto w-full max-w-md rounded-2xl bg-white p-4 shadow-input md:p-8 dark:bg-black">
         <div>
-          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-            {error && <div className={errorBoxClass}>{error}</div>}
-
-            <div className="mb-4 flex w-full min-w-sm flex-col items-center justify-center space-y-2 md:flex-row md:space-y-0 md:space-x-2">
-              <LabelInputContainer>
-                <Input
-                  id="identifier"
-                  type="text"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="Email or Username"
-                  disabled={isLoading}
-                  autoComplete="username"
-                  required
-                />
-
-                <button
-                  className="group/btn relative cursor-pointer block h-10 w-full ounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
-                  type="submit"
-                >
-                  Verify &rarr;
-                  <BottomGradient />
-                </button>
-
-              </LabelInputContainer>
-            </div>
-
-          </form>
-
-          <div>
-
-            <CardContent>
-              <Field>
-                <div className="flex items-center justify-between">
-                  <Button variant="outline" size="xs" >
-                    <RefreshCwIcon />
-                    Resend Code
-                  </Button>
-                </div>
-                <div className="mb-4 flex w-full min-w-sm flex-col items-center justify-center space-y-2 gap-2">
-
-                  <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
-                    value={validCode}
-                    onChange={(value) => setValidCode(value)}
-                  >
-                    <InputOTPGroup className="*:data-[slot=input-otp-slot]:h-12 *:data-[slot=input-otp-slot]:w-11 *:data-[slot=input-otp-slot]:text-xl">
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                    </InputOTPGroup>
-                    <InputOTPSeparator className="mx-2" />
-                    <InputOTPGroup className="*:data-[slot=input-otp-slot]:h-12 *:data-[slot=input-otp-slot]:w-11 *:data-[slot=input-otp-slot]:text-xl">
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-              </Field>
-            </CardContent>
-
-          </div>
-
-          <div>
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          {activePage === "Email" && (
+            <form onSubmit={handleEmailSubmit} className="space-y-4" noValidate>
               {error && <div className={errorBoxClass}>{error}</div>}
 
               <div className="mb-4 flex w-full min-w-sm flex-col items-center justify-center space-y-2 md:flex-row md:space-y-0 md:space-x-2">
                 <LabelInputContainer>
                   <Input
-                    id="Password"
-                    type="string"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Password"
+                    id="identifier"
+                    type="text"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="Email or Username"
                     disabled={isLoading}
-                    required
-                  />
-                  <Input
-                    id="Confirm-Pass"
-                    type="string"
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    placeholder="Confirm Password"
+                    autoComplete="username"
                     required
                   />
 
                   <button
                     className="group/btn relative cursor-pointer block h-10 w-full ounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
                     type="submit"
-                    onClick={compareNumbers}
                   >
-                    Submit &rarr;
+                    Verify Email&rarr;
                     <BottomGradient />
                   </button>
-                  <p>{result}</p>
 
                 </LabelInputContainer>
               </div>
 
             </form>
-          </div>
+          )}
 
+          {activePage === "Code" && (
+            <div>
+              <form onSubmit={handleCodeSubmit} className="space-y-4" noValidate>
+                {error && <div className={errorBoxClass}>{error}</div>}
+                <CardContent>
+                  <Field>
+                    <div className="flex items-center justify-between">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        // onClick={handleResendCode}
+                        disabled={isLoading}
+                      >
+                        <RefreshCwIcon />
+                        Resend Code
+                      </Button>
+                    </div>
+                    <div className="mb-4 flex w-full min-w-sm flex-col items-center justify-center space-y-2 gap-2">
+
+                      <InputOTP maxLength={6} pattern={REGEXP_ONLY_DIGITS_AND_CHARS}
+                        value={validCode}
+                        onChange={(value) => setValidCode(value)}
+                      >
+                        <InputOTPGroup className="*:data-[slot=input-otp-slot]:h-12 *:data-[slot=input-otp-slot]:w-11 *:data-[slot=input-otp-slot]:text-xl">
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                        </InputOTPGroup>
+                        <InputOTPSeparator className="mx-2" />
+                        <InputOTPGroup className="*:data-[slot=input-otp-slot]:h-12 *:data-[slot=input-otp-slot]:w-11 *:data-[slot=input-otp-slot]:text-xl">
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                    <button
+                      className="group/btn relative cursor-pointer block h-10 w-full ounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
+                      type="submit"
+                    >
+                      Verify Code&rarr;
+                      <BottomGradient />
+                    </button>
+                  </Field>
+                </CardContent>
+              </form>
+
+            </div>
+          )}
+
+          {activePage === "password" && (
+            <div>
+              <form onSubmit={handlePasswordSubmit} className="space-y-4" noValidate>
+                {error && <div className={errorBoxClass}>{error}</div>}
+
+                <div className="mb-4 flex w-full min-w-sm flex-col items-center justify-center space-y-2 md:flex-row md:space-y-0 md:space-x-2">
+                  <LabelInputContainer>
+                    <Input
+                      id="Password"
+                      type="string"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Password"
+                      disabled={isLoading}
+                      required
+                    />
+                    <Input
+                      id="Confirm-Pass"
+                      type="string"
+                      value={confirm}
+                      onChange={(e) => setConfirm(e.target.value)}
+                      placeholder="Confirm Password"
+                      required
+                    />
+
+                    <button
+                      className="group/btn relative cursor-pointer block h-10 w-full ounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
+                      type="submit"
+                      onClick={compareNumbers}
+                    >
+                      Submit &rarr;
+                      <BottomGradient />
+                    </button>
+                    <p>{result}</p>
+
+                  </LabelInputContainer>
+                </div>
+
+              </form>
+            </div>
+          )}
         </div>
       </div>
 

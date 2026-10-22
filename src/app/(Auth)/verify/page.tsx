@@ -122,7 +122,7 @@ export default function VerifyForm() {
 
             <p className="text-center text-sm text-slate-500">
               Wrong Username?{" "}
-              <Link href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link href="/sign-up" className="font-medium text-indigo-600 hover:text-indigo-500">
                 Back to signup
               </Link>
             </p>

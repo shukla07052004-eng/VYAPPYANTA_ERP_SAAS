@@ -21,6 +21,8 @@ export interface User extends Document {
     verifyCodeExpiry: Date;
     forgotPasswordToken?: string;
     forgotPasswordTokenExpiry?: Date;
+    resetPasswordToken?: string;
+    resetPasswordTokenExpiry?: Date;
     verifyToken?: string;
     verifyTokenExpiry?: Date;
     createdAt?: Date;
@@ -59,7 +61,9 @@ const UserSchema: Schema<User> = new Schema(
         forgotPasswordToken: String,
         forgotPasswordTokenExpiry: Date,
         verifyToken: String,
-        verifyTokenExpiry: Date
+        verifyTokenExpiry: Date,
+        resetPasswordToken: String,
+        resetPasswordTokenExpiry: Date
     },
     {
         timestamps: true
