@@ -18,7 +18,7 @@ import Table from '@/components/frontendUi/Table.jsx'
 import Modal from '@/components/frontendUi/Modal.jsx'
 import Button from '@/components/frontendUi/Button.jsx'
 import InvoiceView from '@/components/layout/InvoiceView.jsx'
-import ErpImportModal from '../../../components/layout/ErpImportModel'
+import ErpImportModal from '@/components/layout/ErpImportModel'
 import { useRouter } from 'next/navigation'
 
 const FILTERS = ['All', 'Paid', 'Partial', 'Pending']

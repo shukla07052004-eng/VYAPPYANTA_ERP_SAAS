@@ -63,7 +63,21 @@ export default function ErpImportModal({ open, onClose, defaultKind = 'complete'
           title={`Upload ${IMPORT_OPTIONS.find((option) => option.id === importKind)?.label || 'ERP Data'}`}
           subtitle="Drag a file here or use the upload button. Data is mapped automatically, reviewed, then merged into only the matching ERP modules."
           importKind={importKind}
-          onImportComplete={handleImportComplete}
+          onImportComplete={async (result, options) => {
+            const outcome = await applyImportPayloadToStore(
+              result.payload,
+              {
+                ...result.meta,
+                importAnyway: options.importAnyway,
+              }
+            )
+
+            return {
+              success: true,
+              stats: outcome.stats,
+            }
+          }}
+
         />
 
         {(lastStats || importMeta) && (

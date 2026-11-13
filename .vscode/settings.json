@@ -1,0 +1,37 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "postgres",
+            "database": "sujal_db",
+            "username": "postgres",
+            "password": "Sujal@123"
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "postgres",
+            "database": "sql_main",
+            "username": "postgres",
+            "password": "Sujal@123"
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "\tLocal PostgreSQL",
+            "database": "postgres",
+            "username": "postgres",
+            "password": "Sujal@123"
+        }
+    ]
+}

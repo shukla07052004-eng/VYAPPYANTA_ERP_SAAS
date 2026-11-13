@@ -27,6 +27,7 @@ export default function FileImportConverter({
   const [processing, setProcessing] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const [applyingImport, setApplyingImport] = useState(false)
   const [appliedReport, setAppliedReport] = useState(null)
 
   const handleFile = useCallback(async (file) => {
@@ -71,12 +72,40 @@ export default function FileImportConverter({
     : []
   const hasCriticalErrors = (result?.criticalErrors?.length || result?.errors?.length || 0) > 0
   const hasValidationIssues = Boolean(result && ((result.warnings?.length || 0) > 0 || hasCriticalErrors))
-  const canImport = Boolean(result?.payload?.records?.length && !hasCriticalErrors && !processing)
+  const canImport = Boolean(
+    result?.payload?.records?.length &&
+    !hasCriticalErrors &&
+    !processing &&
+    !applyingImport
+  )
 
-  const handleApplyImport = (importAnyway = false) => {
-    if (!result || hasCriticalErrors) return
-    const outcome = onImportComplete?.(result, { importAnyway })
-    setAppliedReport(outcome?.stats ? { stats: outcome.stats, importAnyway } : null)
+
+  const handleApplyImport = async (importAnyway = false) => {
+    if (!result || hasCriticalErrors || applyingImport) return
+
+    setError('')
+    setApplyingImport(true)
+
+    try {
+      const outcome = await onImportComplete?.(result, { importAnyway })
+
+      if (!outcome) {
+        throw new Error('Import handler did not return a result.')
+      }
+
+      if (outcome.success === false) {
+        throw new Error(outcome.message || 'Failed to save imported data.')
+      }
+
+      setAppliedReport({
+        stats: outcome.stats ?? {},
+        importAnyway,
+      })
+    } catch (err) {
+      setError(err?.message || 'Failed to import data.')
+    } finally {
+      setApplyingImport(false)
+    }
   }
 
   return (
@@ -184,10 +213,14 @@ export default function FileImportConverter({
                 )}
                 <Button
                   variant="primary"
-                  disabled={!canImport}
+                  disabled={!canImport || applyingImport}
                   onClick={() => handleApplyImport(hasValidationIssues)}
                 >
-                  {hasValidationIssues ? 'Import Anyway' : 'Import'}
+                  {applyingImport
+                    ? 'Importing to database…'
+                    : hasValidationIssues
+                      ? 'Import Anyway'
+                      : 'Import'}
                 </Button>
               </div>
             </CardBody>
