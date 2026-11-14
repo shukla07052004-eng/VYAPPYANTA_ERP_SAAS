@@ -6,8 +6,18 @@
             "server": "localhost",
             "port": 5432,
             "driver": "PostgreSQL",
+<<<<<<< Updated upstream
             "name": "postgres",
             "database": "sujal_db",
+=======
+<<<<<<< HEAD
+            "name": "postgres_main",
+            "database": "postgres",
+=======
+            "name": "postgres",
+            "database": "sujal_db",
+>>>>>>> 106392051a90b71efef8b236b9a019cdf9a016c0
+>>>>>>> Stashed changes
             "username": "postgres",
             "password": "Sujal@123"
         },
@@ -17,6 +27,12 @@
             "server": "localhost",
             "port": 5432,
             "driver": "PostgreSQL",
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+            "name": "Local_POSTGRES",
+=======
+>>>>>>> Stashed changes
             "name": "postgres",
             "database": "sql_main",
             "username": "postgres",
@@ -29,6 +45,10 @@
             "port": 5432,
             "driver": "PostgreSQL",
             "name": "\tLocal PostgreSQL",
+<<<<<<< Updated upstream
+=======
+>>>>>>> 106392051a90b71efef8b236b9a019cdf9a016c0
+>>>>>>> Stashed changes
             "database": "postgres",
             "username": "postgres",
             "password": "Sujal@123"
