@@ -1,7 +1,18 @@
-import {pool} from 'pg';
 
-const pool = new pool({
-    connectionString: process.env.DATABASE_URL
-})
+import { Pool } from "pg";
+
+const globalForPg = globalThis as typeof globalThis & {
+  pgPool?: Pool;
+};
+
+const pool: Pool =
+  globalForPg.pgPool ??
+  new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPg.pgPool = pool;
+}
 
 export default pool;
