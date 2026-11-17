@@ -1,12 +1,11 @@
 import NextAuth from 'next-auth';
 import Credentials from "next-auth/providers/credentials";
-import { User } from "@/models/userModel";
-import connectDB from '@/lib/dbconnect';
+import pool from "@/lib/dbconnect";
 import { Loginverify } from '@/schemas/loginverify';
 import bcrypt from "bcrypt"
 import GoogleProvider from "next-auth/providers/google";
 
-export const { handlers, auth, signIn,signOut } = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
     secret: process.env.NEXT_AUTH_SECRET,
     providers: [
         GoogleProvider({
@@ -24,36 +23,37 @@ export const { handlers, auth, signIn,signOut } = NextAuth({
                 // This function is called when a user attempts to log in using the credentials provider.
                 // You can implement your own logic here to verify the user's credentials.
                 // For example, you can check the provided email and password against your database.
-                await connectDB();
                 try {
                     const { identifier, password } = await Loginverify.parseAsync(credentials)
 
-                    const user = await User.findOne({
-                        $or: [
-                            { email: identifier },
-                            { username: identifier }
-                        ]
-                    })
-                    if (!user) {
+                    const user = await pool.query(
+                        `SELECT * FROM users 
+                        WHERE email = $1 OR username = $2
+                        LIMIT 1`,
+                        [identifier, identifier]
+                    )
+                    if (!user.rows[0]) {
                         throw new Error('No user found with this email');
                     }
-                    if (!user.isVerified) {
+                    if (!user.rows[0]?.is_verified) {
                         throw new Error('Please verify your account before logging in');
+                    }
+                    if (!user.rows[0].password) {
+                        throw new Error("Please login using Google");
                     }
                     const ispasswordCorrect = await bcrypt.compare(
                         password,
-                        user.password
+                        user.rows[0].password
                     )
 
                     if (ispasswordCorrect) {
                         return {
-                            id: user._id.toString(),
-                            _id: user._id.toString(),
-                            email: user.email,
-                            name: user.username,
-                            username: user.username,
-                            isVerified: user.isVerified,
-                            isAcceptingMessages: user.isAcceptingMessages,
+                            id: user.rows[0].id.toString(),
+                            _id: user.rows[0].id.toString(),
+                            email: user.rows[0].email,
+                            name: user.rows[0].username,
+                            username: user.rows[0].username,
+                            isVerified: user.rows[0].is_verified,
                         }
                     } else {
                         throw new Error('Incorrect password');
@@ -73,28 +73,25 @@ export const { handlers, auth, signIn,signOut } = NextAuth({
     callbacks: {
         async signIn({ user, account }) {
             try {
-                console.log("Google user:", user);
-                console.log("Google account:", account);
+                if (account?.provider !== "google") {
+                    return true;
+                }
 
-                await connectDB();
+                if (!user.email) {
+                    return false;
+                }
 
-                const existingUser = await User.findOne({
-                    email: user.email
-                });
+                const existingUser = await pool.query(
+                    `SELECT id FROM users WHERE email = $1`,
+                    [user.email]
+                );
 
-                console.log("Existing user:", existingUser);
-
-
-                if (!existingUser) {
-                    const createdUser = await User.create({
-                        username: user.name || user.email!.split("@")[0],
-                        email: user.email,
-                        isVerified: true,
-                        verifyCode: null,
-                        verifyCodeExpiry: null
-                    });
-
-                    console.log("Created user:", createdUser);
+                if (existingUser.rows.length === 0) {
+                    await pool.query(
+                        `INSERT INTO users (email, is_verified)
+                 VALUES ($1, $2)`,
+                        [user.email, true]
+                    );
                 }
 
                 return true;
@@ -104,22 +101,44 @@ export const { handlers, auth, signIn,signOut } = NextAuth({
             }
         },
 
-        async jwt({ token, user }: any) {
-            if (user) {
-                token._id = user._id?.toString();
-                token.isVerified = user.isVerified;
-                token.isAcceptingMessages = user.isAcceptingMessages;
-                token.username = user.username;
+        async jwt({ token, user, account }: any) {
+
+            if (user && account?.provider === "credentials") {
+
+                token._id = user.id.toString();
                 token.email = user.email;
+                token.username = user.username;
+                token.isVerified = user.isVerified;
+
             }
 
-            return token
+            if (user && account?.provider === "google") {
+
+                const result = await pool.query(
+                    `SELECT id, email, username, is_verified
+             FROM users
+             WHERE email = $1`,
+                    [user.email]
+                );
+
+                const dbUser = result.rows[0];
+
+                if (!dbUser) {
+                    throw new Error("Google user not found in database");
+                }
+
+                token._id = dbUser.id.toString();
+                token.email = dbUser.email;
+                token.username = dbUser.username;
+                token.isVerified = dbUser.is_verified;
+            }
+
+            return token;
         },
         async session({ session, token }: any) {
             if (token) {
-                session._id = token._id;
+                session.id = token.id;
                 session.isVerified = token.isVerified;
-                session.isAcceptingMessages = token.isAcceptingMessages;
                 session.username = token.username;
                 session.email = token.email as string;
             }
