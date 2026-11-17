@@ -8,7 +8,7 @@ const globalForPg = globalThis as typeof globalThis & {
 const pool: Pool =
   globalForPg.pgPool ??
   new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.SQL_URI,
   });
 
 if (process.env.NODE_ENV !== "production") {
