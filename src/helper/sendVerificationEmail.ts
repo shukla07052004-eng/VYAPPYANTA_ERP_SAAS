@@ -3,7 +3,7 @@ import VerificationEmailTemplate from "../../email/verifyEmail";
 import { ApiResponse } from "@/types/ApiResponse";
 import { success } from "zod";
 
-export async function sendEmail({ email, username, verifyCode }: any): Promise<ApiResponse> {
+export async function sendEmail({ email, username, verifycode }: any): Promise<ApiResponse> {
     try {
         console.log("signup route hit")
 
@@ -12,7 +12,7 @@ export async function sendEmail({ email, username, verifyCode }: any): Promise<A
             from: 'Acme <onboarding@resend.dev>',
             to: email,
             subject: "Resend Test ",
-            react: VerificationEmailTemplate({ username: username, otp: verifyCode })
+            react: VerificationEmailTemplate({ username: username, otp: verifycode })
 
         });
 

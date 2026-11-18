@@ -1,43 +1,49 @@
-import connectDB from "@/lib/dbconnect"
-import { User } from "@/models/userModel"
+import Pool from "@/lib/dbconnect";
 
 
 export async function POST(request: Request) {
     
     try {
-        await connectDB();
         const { email, code } = await request.json()
-        const decodedUsername = decodeURIComponent(email);
+        const decodedEmail = decodeURIComponent(email);
 
-        console.log(email)
+        console.log(email, code, "EMAIL AND CODE RECEIVED");
         if(code){
             console.log("why i can see code", code)
         }else{
             console.log("code is not reaching at us")
         }
 
-        const user = await User.findOne({ email: decodedUsername })
+        const user = await Pool.query(
+            `SELECT * FROM users WHERE email = $1 LIMIT 1`,
+            [decodedEmail]
+        )
 
-        if (!user) {
+        const userdata = user.rows[0];
+
+        if (!userdata) {
             return Response.json(
                 { success: false, message: 'User not found' },
                 { status: 404 }
             );
         }
 
-        const iscodeValid = user.verifyCode.toString() === code
-        const isCodeNotExpired = new Date(user.verifyCodeExpiry) > new Date();
+        const iscodeValid = userdata.verifycode.toString() === code
+        const isCodeNotExpired = new Date(userdata.verifycodeexpiry) > new Date();
 
         if (iscodeValid && isCodeNotExpired) {
-            console.log("BEFORE:", user.isVarified);
+            console.log("BEFORE:", userdata.is_verified);
 
-            user.isVarified = true;
+            userdata.is_verified = true;
 
-            console.log("AFTER CHANGE:", user.isVarified);
+            console.log("AFTER CHANGE:", userdata.is_verified);
 
-            await user.save();
+            await Pool.query(
+                `UPDATE users SET is_verified = $1 WHERE email = $2`,
+                [userdata.is_verified, email]
+            );
 
-            console.log("AFTER SAVE:", user.isVarified);
+            console.log("AFTER SAVE:", userdata.is_verified);
 
             return Response.json(
                 {
@@ -60,7 +66,7 @@ export async function POST(request: Request) {
                 {
                     success: false,
                     message:
-                        'varification is not valid',
+                        'Verification is not valid',
                 },
                 { status: 400 }
             );

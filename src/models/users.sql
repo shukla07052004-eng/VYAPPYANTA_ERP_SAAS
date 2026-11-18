@@ -32,3 +32,6 @@ SELECT * FROM users;
 ALTER TABLE users
 ALTER COLUMN verifycode DROP NOT NULL,
 ALTER COLUMN verifycodeexpiry DROP NOT NULL;
+
+
+DELETE FROM users WHERE id = 5;

@@ -1,15 +1,11 @@
-import connectDB from "@/lib/dbconnect";
+import Pool from "@/lib/dbconnect";
 import { NextRequest, NextResponse } from "next/server"
-import { User } from "@/models/userModel"
 import { signupVerifySchema } from '@/schemas/signupverify'
 import bcrpt from "bcrypt"
 import { sendEmail } from "@/helper/sendVerificationEmail";
 
 export async function POST(req: NextRequest) {
     try {
-        await connectDB()
-
-
         const body = await req.json()
 
         console.log("BODY:", body);
@@ -30,52 +26,56 @@ export async function POST(req: NextRequest) {
 
         const { email, username, password } = result.data
 
-        const existingUserByEmail = await User.findOne({ email })
-        let verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const existingUser = await Pool.query(
+            `SELECT * FROM users WHERE email = $1 LIMIT 1`,
+            [email]
+        )
+
+        const existingUserByEmail = existingUser.rows[0];
 
 
         if (existingUserByEmail) {
-            if (existingUserByEmail.isVarified) {
+            if (existingUserByEmail.is_verified) {
                 return NextResponse.json({
                     success: false,
                     message: "User Verification Completed Successfully: User Verified"
                 })
             } else {
                 const hashedPassword = await bcrpt.hash(password, 10)
-                existingUserByEmail.password = hashedPassword;
-                existingUserByEmail.verifyCode = verifyCode
-                existingUserByEmail.verifyCodeExpiry = new Date(Date.now() + 3600000);
+                const verifycodeexpiry = new Date(Date.now() + 3600000);
+                const verifycode = Math.floor(100000 + Math.random() * 900000).toString();
                 
 
-                await existingUserByEmail.save();
+                await Pool.query(
+                    `UPDATE users SET password=$1, verifycode=$2, verifycodeexpiry=$3 WHERE email = $4`,
+                    [hashedPassword, verifycode, verifycodeexpiry, email]
+                );
 
-                await sendEmail({ email, username, verifyCode })
+                await sendEmail({ email, username, verifycode })
 
             }
         } else {
             const hashedPassword = await bcrpt.hash(password, 10)
             const expiryDate = new Date();
             expiryDate.setHours(expiryDate.getHours() + 1);
+                    const verifycode = Math.floor(100000 + Math.random() * 900000).toString();
 
-            const newUser = await User.create(
-                {
+            const newUser = await Pool.query(
+                `INSERT INTO users (username, email, password, is_verified, verifycode, verifycodeexpiry) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                [
                     username,
                     email,
-                    password: hashedPassword,
-                    isVarified: false,
-                    verifyCode,
-                    verifyCodeExpiry: expiryDate,
-                }
+                    hashedPassword,
+                    false,
+                    verifycode,
+                    expiryDate
+                ]
             )
             console.log("USER CREATED:", newUser);
-            console.log("DATABASE:", User.db.name);
-            console.log("COLLECTION:", User.collection.name);
-
-            await newUser.save()
 
             // send verification code
 
-            const emailResponse = await sendEmail({ email, username, verifyCode })
+            const emailResponse = await sendEmail({ email, username, verifycode })
 
             if (!emailResponse.success) {
                 return NextResponse.json(
