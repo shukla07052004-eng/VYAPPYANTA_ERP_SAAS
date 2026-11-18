@@ -1,6 +1,4 @@
-
-import connectDB from "@/lib/dbconnect";
-import { User } from "@/models/userModel";
+import Pool from "@/lib/dbconnect";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import crypto from "crypto";
@@ -13,7 +11,6 @@ const verifyCodeSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    await connectDB();
 
     const body = await req.json();
 
@@ -32,14 +29,13 @@ export async function POST(req: NextRequest) {
     const { identifier, validCode } = result.data;
 
     // Find user by email or username
-    const user = await User.findOne({
-      $or: [
-        { email: identifier },
-        { username: identifier },
-      ],
-    });
+    const user = await Pool.query(
+        `SELECT * FROM users WHERE email = $1 OR username = $2 LIMIT 1;`,
+        [identifier, identifier]
+    )
 
-    if (!user || !user.verifyCode || !user.verifyCodeExpiry) {
+    const userdata = user.rows[0];
+    if (!userdata || !userdata.verifycode || !userdata.verifycodeexpiry) {
       return NextResponse.json(
         {
           success: false,
@@ -50,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check whether the code has expired
-    if (new Date(user.verifyCodeExpiry).getTime() <= Date.now()) {
+    if (new Date(userdata.verifycodeexpiry).getTime() <= Date.now()) {
       return NextResponse.json(
         {
           success: false,
@@ -61,7 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Compare the submitted code with the stored code
-    if (String(user.verifyCode) !== validCode) {
+    if (String(userdata.verifycode) !== validCode) {
       return NextResponse.json(
         {
           success: false,
@@ -76,21 +72,30 @@ export async function POST(req: NextRequest) {
 
     // Store only the hash of the reset token.
     // Add these fields to your User schema first.
-    user.resetPasswordToken = crypto
+    userdata.resetpasswordtoken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
 
     // Token expires in 10 minutes
-    user.resetPasswordTokenExpiry = new Date(
+    userdata.resetpasswordtokenexpiry = new Date(
       Date.now() + 10 * 60 * 1000
     );
 
     // Consume the verification code so it cannot be reused
-    user.verifyCode = undefined;
-    user.verifyCodeExpiry = undefined;
+    userdata.verifycode = undefined;
+    userdata.verifycodeexpiry = undefined;
 
-    await user.save();
+    await Pool.query(
+      `UPDATE users SET resetpasswordtoken = $1, resetpasswordtokenExpiry = $2, verifycode = $3, verifycodeexpiry = $4 WHERE id = $5`,
+      [
+        userdata.resetpasswordtoken,
+        userdata.resetpasswordtokenexpiry,
+        userdata.verifycode,
+        userdata.verifycodeexpiry,
+        userdata.id
+      ]
+    );
 
     // Send the raw token to the frontend once.
     // API 3 must hash it and compare it with the stored hash.
